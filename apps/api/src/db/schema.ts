@@ -265,6 +265,159 @@ export const signals = pgTable(
 )
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * Opportunities
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** A deal: one customer, one product, one need. The centre of the system and
+ *  the only thing that travels up the chain.
+ *
+ *  The unit that gets approved, counted into the pipeline and added to a
+ *  target is this, not the customer. One customer can have several open at
+ *  once — a mortgage and a credit card are two deals on one file — which is
+ *  why the pipeline counts rows here and never counts people.
+ *
+ *  Three axes run through this table and must not be collapsed into one:
+ *
+ *    stage           how far the customer has come. Their journey.
+ *    approvalStatus  how far the paperwork has come inside MSB. One-way.
+ *    nextAction      who has to do something next. Runs both ways.
+ *
+ *  A deal can be in `negotiation` with the customer while the paperwork has
+ *  only reached `sale_confirmed` at home, and the next action can bounce back
+ *  down to the salesperson without the approval status ever going backwards. */
+export const opportunities = pgTable(
+  'opportunities',
+  {
+    id: text('id').primaryKey(),
+    /** Human-facing reference, OPP-2026-0001. People say it out loud. */
+    code: text('code').notNull().unique(),
+
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id),
+
+    /** Copied from the customer rather than joined. Every pipeline, gap and
+     *  forecast query filters on it, and the branch manager's screen compares
+     *  the two segments side by side; paying for a join on the hottest query
+     *  in the app to avoid a column that changes almost never is a bad trade.
+     *  Whatever moves a customer between segments has to update this too. */
+    segment: text('segment').notNull(),
+
+    product: text('product').notNull(),
+    need: text('need').notNull(),
+    /** Deal size in whole đồng. Arithmetic goes through lib/money.ts. */
+    value: bigint('value', { mode: 'number' }).notNull(),
+
+    stage: text('stage').notNull().default('prospecting'),
+
+    /** What a person has checked and stands behind. */
+    confirmedData: jsonb('confirmed_data').notNull().default(sql`'{}'::jsonb`),
+    /** What the model inferred and nobody has confirmed yet.
+     *
+     *  Two columns, never one. This separation is the whole argument of the
+     *  entry — the model proposes, a person confirms — and the screen shows
+     *  them in two different colours. Merging them loses the point and loses
+     *  the answer to "how do you keep a human in control". */
+    aiHypothesis: jsonb('ai_hypothesis').notNull().default(sql`'{}'::jsonb`),
+    /** What is still unknown. Also what a team lead sends a deal back for. */
+    missingInfo: text('missing_info').array().notNull().default(sql`'{}'`),
+
+    /** Why the deal is stuck, as a code so identical blockers group together.
+     *
+     *  Free text here would have killed the branch manager's best screen: the
+     *  point is to see that eleven deals worth 47 billion are all stuck on
+     *  the same thing, which is a process problem, not eleven people's
+     *  problem. `select blocker_code, count(*), sum(value) ... group by 1`
+     *  only works if the values are a closed set. */
+    blockerCode: text('blocker_code'),
+    /** The specifics in the salesperson's own words. */
+    blockerNote: text('blocker_note'),
+
+    nextAction: text('next_action'),
+    /** Who owes the next move. Points at the salesperson most of the time,
+     *  but a branch manager's decision hands work back down through it, which
+     *  is what closes the loop instead of ending at a dashboard. */
+    nextActionOwnerId: text('next_action_owner_id').references(() => users.id),
+
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id),
+    /** A date, not a timestamp: a bank deadline is a day, and comparing days
+     *  keeps "overdue" from flipping with the clock. */
+    dueDate: date('due_date'),
+
+    /** Conversion chance, 0-100. Defaults follow the stage but a person may
+     *  override it — they have met the customer and the table has not. */
+    winProbability: integer('win_probability').notNull().default(10),
+
+    supportNeeded: text('support_needed'),
+    /** What the branch manager actually granted, e.g. a rate concession. */
+    bmDecision: text('bm_decision'),
+
+    approvalStatus: text('approval_status').notNull().default('sale_reviewing'),
+
+    outcome: text('outcome').notNull().default('open'),
+    outcomeReason: text('outcome_reason'),
+
+    /** Typed by a person or drafted by the model. This one column is the
+     *  before/after axis of the whole trial: the same system, measured twice. */
+    createdVia: text('created_via').notNull().default('manual'),
+
+    /** Timing marks, so the trial numbers are measured rather than estimated.
+     *  drafted → confirmed is what a deal costs a salesperson; confirmed →
+     *  lead acted is how long support takes to arrive. */
+    draftedAt: timestamp('drafted_at', { withTimezone: true }),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    leadActedAt: timestamp('lead_acted_at', { withTimezone: true }),
+    bmActedAt: timestamp('bm_acted_at', { withTimezone: true }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('opportunities_customer').on(t.customerId),
+    /** A salesperson's own list, and a team lead's inbox of confirmed deals. */
+    index('opportunities_owner_status').on(t.ownerId, t.approvalStatus),
+    /** The pipeline, per segment. */
+    index('opportunities_segment_stage').on(t.segment, t.stage),
+    index('opportunities_due').on(t.dueDate),
+    /** "Today's priorities" for whoever is signed in. */
+    index('opportunities_next_action').on(t.nextActionOwnerId, t.dueDate),
+    /** Recurring blockers, the branch manager's view. */
+    index('opportunities_blocker').on(t.blockerCode),
+
+    check('opportunities_segment', sql`${t.segment} in ('sse', 'rb')`),
+    check('opportunities_value', sql`${t.value} > 0`),
+    check(
+      'opportunities_win_probability',
+      sql`${t.winProbability} between 0 and 100`,
+    ),
+    check(
+      'opportunities_stage',
+      sql`${t.stage} in ('prospecting', 'discovery', 'proposal', 'negotiation', 'documentation', 'closing')`,
+    ),
+    check(
+      'opportunities_approval_status',
+      sql`${t.approvalStatus} in ('ai_drafted', 'sale_reviewing', 'sale_confirmed', 'lead_viewed', 'lead_returned', 'lead_approved', 'escalated_to_bm', 'bm_decided', 'completed', 'closed_lost')`,
+    ),
+    check('opportunities_outcome', sql`${t.outcome} in ('open', 'won', 'lost')`),
+    check('opportunities_created_via', sql`${t.createdVia} in ('manual', 'ai')`),
+    check(
+      'opportunities_blocker_code',
+      sql`${t.blockerCode} is null or ${t.blockerCode} in ('rate', 'speed', 'experience', 'documents', 'collateral', 'policy', 'competitor', 'customer_hesitation', 'other')`,
+    ),
+
+    /** A closed deal has to say why. The brief asks for it, and a pipeline
+     *  full of losses with no reason teaches nobody anything. */
+    check(
+      'opportunities_outcome_reason',
+      sql`${t.outcome} = 'open' or ${t.outcomeReason} is not null`,
+    ),
+  ],
+)
+
+/* ──────────────────────────────────────────────────────────────────────────
  * Sessions
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -317,6 +470,98 @@ export type SignalType = (typeof SIGNAL_TYPES)[number]
 
 export const SIGNAL_SOURCES = ['sale', 'system', 'ai'] as const
 export type SignalSource = (typeof SIGNAL_SOURCES)[number]
+
+export type Opportunity = typeof opportunities.$inferSelect
+
+/** How far the customer has come. Their journey, not the paperwork's. */
+export const STAGES = [
+  'prospecting',
+  'discovery',
+  'proposal',
+  'negotiation',
+  'documentation',
+  'closing',
+] as const
+export type Stage = (typeof STAGES)[number]
+
+/** Default conversion chance per stage, and the only input to the forecast
+ *  besides deal size. A person may override it on any single deal.
+ *
+ *  These numbers decide every figure on the branch manager's screen, so they
+ *  are a business decision, not a technical one — they need signing off by
+ *  someone who actually runs a branch before the trial. */
+export const STAGE_WIN_PROBABILITY: Record<Stage, number> = {
+  prospecting: 10,
+  discovery: 25,
+  proposal: 50,
+  negotiation: 70,
+  documentation: 85,
+  closing: 100,
+}
+
+/** The ten approval states from the brief, in order.
+ *
+ *  Internal vocabulary only: nobody ever picks one from a dropdown. A person
+ *  presses "Confirm" or "Send back" and the status is the consequence. Two of
+ *  these are the gates that decide what the tier above can see at all. */
+export const APPROVAL_STATUSES = [
+  'ai_drafted',
+  'sale_reviewing',
+  'sale_confirmed',
+  'lead_viewed',
+  'lead_returned',
+  'lead_approved',
+  'escalated_to_bm',
+  'bm_decided',
+  'completed',
+  'closed_lost',
+] as const
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number]
+
+/** A team lead sees nothing before this point — drafts stay private to the
+ *  salesperson who wrote them. */
+export const VISIBLE_TO_LEAD: readonly ApprovalStatus[] = [
+  'sale_confirmed',
+  'lead_viewed',
+  'lead_returned',
+  'lead_approved',
+  'escalated_to_bm',
+  'bm_decided',
+  'completed',
+  'closed_lost',
+]
+
+/** A branch manager opens a deal only once it has been escalated. They still
+ *  see every VISIBLE_TO_LEAD row in the totals — the pipeline would be short
+ *  otherwise — but the list they can act on is this one. */
+export const VISIBLE_TO_BM: readonly ApprovalStatus[] = [
+  'escalated_to_bm',
+  'bm_decided',
+  'completed',
+  'closed_lost',
+]
+
+export const OUTCOMES = ['open', 'won', 'lost'] as const
+export type Outcome = (typeof OUTCOMES)[number]
+
+export const CREATED_VIA = ['manual', 'ai'] as const
+export type CreatedVia = (typeof CREATED_VIA)[number]
+
+/** Why a deal is stuck. A closed set so identical blockers group together
+ *  across the branch — the first three come straight from the brief's two
+ *  customer scenarios. */
+export const BLOCKER_CODES = [
+  'rate',
+  'speed',
+  'experience',
+  'documents',
+  'collateral',
+  'policy',
+  'competitor',
+  'customer_hesitation',
+  'other',
+] as const
+export type BlockerCode = (typeof BLOCKER_CODES)[number]
 
 /** The four roles. Authorization reads this and nothing else. */
 export const ROLES = ['sale', 'team_lead', 'bm', 'admin'] as const
