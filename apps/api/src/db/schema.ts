@@ -1,11 +1,13 @@
 import { sql } from 'drizzle-orm'
 import {
+  bigint,
   boolean,
   check,
   date,
   foreignKey,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -132,6 +134,71 @@ export const users = pgTable(
 )
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * Customers
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** A customer file. The bedrock of everything, and deliberately quiet: across
+ *  the whole life of a deal this table changes about twice — when the customer
+ *  is taken on, and when a product is finally sold. Everything that moves
+ *  belongs in `signals` or `opportunities`.
+ *
+ *  It carries no approval status, so it needs no audit trail either. Only
+ *  opportunities travel up the chain. */
+export const customers = pgTable(
+  'customers',
+  {
+    id: text('id').primaryKey(),
+    code: text('code').notNull().unique(),
+    name: text('name').notNull(),
+    segment: text('segment').notNull(),
+
+    /** The salesperson who holds this relationship. Row-level scoping reads
+     *  this together with `users.manager_id`: a team lead sees their own
+     *  people's customers, never a peer's. */
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => users.id),
+
+    /** MSB products already in use. An array rather than a join table because
+     *  nothing is ever queried by product in this build, and a join table
+     *  would cost a migration and two screens for no gain. */
+    currentProducts: text('current_products').array().notNull().default(sql`'{}'`),
+
+    /** Turnover in whole đồng. `bigint` in Postgres, `mode: 'number'` in
+     *  TypeScript: the values sit far inside what a double holds exactly,
+     *  while a real BigInt would refuse to serialize to JSON on the way out.
+     *  Arithmetic on any amount goes through lib/money.ts, never raw floats. */
+    revenue: bigint('revenue', { mode: 'number' }),
+
+    /** Where the relationship stands with MSB, free text for now. */
+    relationStage: text('relation_stage'),
+
+    /** Fields that differ by segment — cash-flow share moving to another bank
+     *  for SSE, repayment source and collateral for retail. They live here
+     *  rather than as columns because half of them would be null for half the
+     *  rows, and because the sales team can add one without a migration.
+     *
+     *  The rule for choosing: anything filtered, summed or shown in a list
+     *  column gets a real column; anything read only on the detail screen
+     *  goes in here. */
+    attributes: jsonb('attributes').notNull().default(sql`'{}'::jsonb`),
+
+    contactName: text('contact_name'),
+    contactPhone: text('contact_phone'),
+    note: text('note'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('customers_owner').on(t.ownerId),
+    index('customers_segment').on(t.segment),
+    check('customers_segment', sql`${t.segment} in ('sse', 'rb')`),
+    check('customers_revenue', sql`${t.revenue} is null or ${t.revenue} >= 0`),
+  ],
+)
+
+/* ──────────────────────────────────────────────────────────────────────────
  * Sessions
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -165,6 +232,7 @@ export const sessions = pgTable(
 export type Unit = typeof units.$inferSelect
 export type User = typeof users.$inferSelect
 export type Session = typeof sessions.$inferSelect
+export type Customer = typeof customers.$inferSelect
 
 /** The four roles. Authorization reads this and nothing else. */
 export const ROLES = ['sale', 'team_lead', 'bm', 'admin'] as const
