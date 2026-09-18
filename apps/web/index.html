@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>MSB AI Nexus</title>
+
+    <!-- Nền của thẻ html, chép từ --bg trong tokens.css.
+         Phải nằm ngay trong head: lúc phát triển thì tokens.css do JS chèn vào
+         nên có một nhịp trang chưa có màu, và trình duyệt vẽ nhịp đó bằng
+         trắng. Đây là chỗ duy nhất được phép chép lại giá trị của tokens.css,
+         sửa bên kia thì sửa cả bên này. -->
+    <style>
+      html { background: #f1f2f3 }
+      html[data-theme='dark'] { background: #141617 }
+    </style>
+
+    <!-- Đóng dấu chế độ màu trước khi trang vẽ nét đầu tiên. ThemeProvider
+         cũng làm việc này, nhưng nó chỉ chạy sau khi React gắn vào cây — muộn
+         hơn một nhịp vẽ, nên người dùng thấy loé trắng rồi mới sang tối.
+         Đọc cùng khoá localStorage và cùng giá trị mặc định với theme.tsx. -->
+    <script>
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem('appearance') || '{}')
+          var mode = s.mode || 'light'
+          var dark =
+            mode === 'dark' ||
+            (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

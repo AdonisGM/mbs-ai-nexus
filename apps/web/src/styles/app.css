@@ -1,0 +1,293 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* Cầu nối token sang tiện ích Tailwind: bg-surface, text-ink, border-line ... */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-rail: var(--rail);
+  --color-sunken: var(--sunken);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-tip-bg: var(--tip-bg);
+  --color-tip-fg: var(--tip-fg);
+
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-num: Roboto, system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+
+  --shadow-card: var(--shadow);
+  --shadow-pop: var(--shadow-md);
+  --shadow-modal: var(--shadow-lg);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    margin: 0;
+    background: var(--bg);
+  }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Thẻ a trong app này phần lớn không phải link giữa văn bản mà là phần tử
+     điều hướng: mục menu, hàng bảng, thẻ bấm được. Chúng đã có nền, viền và
+     trạng thái riêng để nhận ra, nên gạch chân cho tất cả thì cả cột menu biến
+     thành một danh sách gạch dưới. */
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover {
+    opacity: 0.8;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+  /* Máy nào tắt hiệu ứng chuyển động thì bỏ hết: khung xương lúc chờ, biểu
+     tượng quay của nút tải lại, thanh màn chờ. Chúng chỉ để báo đang bận, mà
+     việc ấy chữ cũng nói được. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  /* Thanh cuộn hoà với nền giấy, không dùng mặc định của hệ điều hành */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line2);
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@utility num {
+  font-family: Roboto, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22g%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23g)%22/%3E%3C/svg%3E");
+}
+
+/* Ark đặt z-index inline cho lớp nổi, cần đè để danh sách hiện trên modal. */
+[data-scope='select'][data-part='positioner'],
+[data-scope='combobox'][data-part='positioner'],
+[data-scope='menu'][data-part='positioner'] {
+  z-index: 60 !important;
+}
+
+/* Trang xem trước ghi chú. Nội dung do thư viện markdown dựng nên không gắn
+   được class Tailwind vào từng thẻ, phải tô bằng bộ chọn con. */
+/* Link nằm giữa văn bản thì ngược lại: ở bộ Bản dựng hình, màu nhấn trùng đúng
+   màu chữ nên không còn gì phân biệt link với chữ thường. Gạch chân mờ làm việc
+   ấy, đậm lên khi trỏ vào. Pha từ currentColor nên bộ màu nào cũng đúng, không
+   cần một biến riêng cho từng bộ. */
+.note-preview a,
+.ProseMirror a {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+  text-underline-offset: 2px;
+}
+.note-preview a:hover,
+.ProseMirror a:hover {
+  text-decoration-color: currentColor;
+}
+
+.note-preview {
+  line-height: 1.75;
+}
+.note-preview h1,
+.note-preview h2,
+.note-preview h3 {
+  margin: 1.4em 0 0.5em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.note-preview h1 { font-size: 1.5em }
+.note-preview h2 { font-size: 1.25em }
+.note-preview h3 { font-size: 1.08em }
+.note-preview p { margin: 0.75em 0 }
+.note-preview ul,
+.note-preview ol { margin: 0.75em 0; padding-left: 1.4em }
+.note-preview li { margin: 0.3em 0 }
+/* Trình soạn bọc nội dung mỗi mục danh sách trong một thẻ p, mà p thì có lề
+   0,75em. Không gỡ lề đó ra thì chữ tụt xuống dưới ô đánh dấu và mỗi mục cao
+   gấp đôi cần thiết. Đoạn thứ hai trở đi trong cùng một mục mới cần lề. */
+.note-preview li > p,
+.ProseMirror li > p,
+/* Mục của danh sách việc còn một lớp div bọc ngoài nữa. */
+.note-preview li > div > p,
+.ProseMirror li > div > p { margin: 0 }
+.note-preview li > p + p,
+.ProseMirror li > p + p,
+.note-preview li > div > p + p,
+.ProseMirror li > div > p + p { margin-top: 0.5em }
+.note-preview ul { list-style: disc }
+.note-preview ol { list-style: decimal }
+.note-preview blockquote {
+  margin: 1em 0;
+  padding: 0.5em 0 0.5em 1em;
+  border-left: 3px solid var(--accent);
+  color: var(--ink2);
+}
+.note-preview code {
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-size: 0.88em;
+  background: var(--sunken);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.note-preview pre {
+  margin: 1em 0;
+  padding: 12px 14px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.note-preview pre code { background: none; padding: 0 }
+.note-preview hr { margin: 1.4em 0; border: none; border-top: 1px solid var(--line) }
+.note-preview a { color: var(--accent) }
+.note-preview table {
+  margin: 1em 0;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+.note-preview th,
+.note-preview td {
+  border: 1px solid var(--line);
+  padding: 7px 10px;
+  text-align: left;
+}
+.note-preview th { background: var(--sunken); font-weight: 600 }
+.note-preview img { max-width: 100%; border-radius: 8px }
+
+/* Trình soạn bài. Dùng chung kiểu chữ với trang xem trước để cái gõ ra trông
+   đúng như cái hiện lên, khỏi phải đoán. */
+.ProseMirror { outline: none }
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted);
+}
+.ProseMirror:focus { outline: none }
+.ProseMirror img { max-width: 100%; border-radius: 8px; margin: 1em 0 }
+.ProseMirror img.ProseMirror-selectednode { outline: 2px solid var(--accent) }
+.ProseMirror hr {
+  margin: 1.4em 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+.ProseMirror hr.ProseMirror-selectednode { border-top-color: var(--accent) }
+
+/* Những thứ trình soạn dựng ra mà trang xem trước chưa có kiểu: danh sách việc,
+   tô nền, chỉ số trên dưới, và bảng có thể kéo giãn cột. */
+.note-preview mark,
+.ProseMirror mark {
+  background: var(--warn-soft);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.note-preview sub, .ProseMirror sub { font-size: 0.75em; vertical-align: sub }
+.note-preview sup, .ProseMirror sup { font-size: 0.75em; vertical-align: super }
+
+.note-preview ul[data-type='taskList'],
+.ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.2em;
+}
+.note-preview ul[data-type='taskList'] li,
+.ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0.15em 0;
+}
+.note-preview ul[data-type='taskList'] li > label,
+.ProseMirror ul[data-type='taskList'] li > label {
+  /* Canh ô đánh dấu theo dòng chữ đầu tiên, không phải theo cả khối. */
+  margin-top: 0.28em;
+  flex: none;
+  display: flex;
+}
+.note-preview ul[data-type='taskList'] input,
+.ProseMirror ul[data-type='taskList'] input { accent-color: var(--accent) }
+.note-preview ul[data-type='taskList'] li > div,
+.ProseMirror ul[data-type='taskList'] li > div { flex: 1 }
+.note-preview ul[data-type='taskList'] li[data-checked='true'] > div,
+.ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.ProseMirror table {
+  margin: 1em 0;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  overflow: hidden;
+}
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid var(--line2);
+  padding: 7px 10px;
+  vertical-align: top;
+  position: relative;
+}
+.ProseMirror th { background: var(--sunken); font-weight: 600; text-align: left }
+.ProseMirror .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+  cursor: col-resize;
+}
+.ProseMirror.resize-cursor { cursor: col-resize }
