@@ -199,6 +199,72 @@ export const customers = pgTable(
 )
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * Signals
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** What was just observed about a customer: cash moving to another bank, a
+ *  rate being compared, a deadline appearing. Where `customers` holds traits
+ *  that barely change, this holds events that do.
+ *
+ *  It is the model's raw material. Generating a draft reads the customer for
+ *  context and the signals for what has actually been happening; without this
+ *  table the model only ever sees a static file.
+ *
+ *  Append-only. A signal that turns out to be wrong is corrected by writing a
+ *  newer one over the top, never by editing or deleting: the mistaken reading
+ *  is itself evidence, and it feeds the recurring-blocker view the branch
+ *  manager works from.
+ *
+ *  Signals hang off the customer, not off a deal, because one observation can
+ *  feed several — "cash moving to another bank" is both a current-account
+ *  opportunity and a working-capital one. */
+export const signals = pgTable(
+  'signals',
+  {
+    id: text('id').primaryKey(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id, { onDelete: 'cascade' }),
+
+    type: text('type').notNull(),
+    /** The observation itself, one sentence. */
+    content: text('content').notNull(),
+    source: text('source').notNull().default('sale'),
+
+    /** When it was observed, which is not when it was typed up. A meeting on
+     *  Friday entered on Monday has to sort by the Friday. */
+    observedAt: timestamp('observed_at', { withTimezone: true }).notNull().defaultNow(),
+
+    /** Null when the system or the model wrote the row. */
+    authorId: text('author_id').references(() => users.id),
+
+    /** The salesperson's own sentence, kept verbatim.
+     *
+     *  This is the evidence behind "the model proposes, a person confirms":
+     *  it can be put side by side with what the model inferred from it. Also
+     *  the honest record if the model reads a sentence wrongly. */
+    rawNote: text('raw_note'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    /** The customer timeline, newest first — the one query this table serves. */
+    index('signals_customer_observed').on(t.customerId, t.observedAt),
+    check(
+      'signals_type',
+      sql`${t.type} in ('cash_flow', 'product_gap', 'need', 'competition', 'deadline', 'documents', 'other')`,
+    ),
+    check('signals_source', sql`${t.source} in ('sale', 'system', 'ai')`),
+    /** A signal written by a person has to say who. Only the system and the
+     *  model are allowed to be anonymous. */
+    check(
+      'signals_author_by_source',
+      sql`${t.source} <> 'sale' or ${t.authorId} is not null`,
+    ),
+  ],
+)
+
+/* ──────────────────────────────────────────────────────────────────────────
  * Sessions
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -233,6 +299,24 @@ export type Unit = typeof units.$inferSelect
 export type User = typeof users.$inferSelect
 export type Session = typeof sessions.$inferSelect
 export type Customer = typeof customers.$inferSelect
+export type Signal = typeof signals.$inferSelect
+
+/** What kind of thing was observed. The list comes straight from the two
+ *  customer scenarios in the brief; `other` is the escape hatch so a
+ *  salesperson is never blocked from recording something real. */
+export const SIGNAL_TYPES = [
+  'cash_flow',
+  'product_gap',
+  'need',
+  'competition',
+  'deadline',
+  'documents',
+  'other',
+] as const
+export type SignalType = (typeof SIGNAL_TYPES)[number]
+
+export const SIGNAL_SOURCES = ['sale', 'system', 'ai'] as const
+export type SignalSource = (typeof SIGNAL_SOURCES)[number]
 
 /** The four roles. Authorization reads this and nothing else. */
 export const ROLES = ['sale', 'team_lead', 'bm', 'admin'] as const
