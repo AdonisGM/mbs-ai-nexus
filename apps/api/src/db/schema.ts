@@ -477,6 +477,18 @@ export const auditEvents = pgTable(
     /** Milliseconds spent in `fromStatus`. Null on the first event. */
     heldMs: bigint('held_ms', { mode: 'number' }),
 
+    /** When the person it was handed to actually looked at it.
+     *
+     *  Notifications are not a table: an unread badge is "handovers addressed
+     *  to me with nothing here yet", which the to_user index already answers.
+     *  A separate notifications table would duplicate every row of this one
+     *  and then need keeping in step with it.
+     *
+     *  It also happens to be a measurement the brief asks for — how long from
+     *  a salesperson asking for help to a team lead noticing — which a plain
+     *  read flag would have thrown away. Hence a timestamp, not a boolean. */
+    readAt: timestamp('read_at', { withTimezone: true }),
+
     /** Field-level before/after, e.g. { "value": [2000000000, 2500000000] }. */
     changes: jsonb('changes').notNull().default(sql`'{}'::jsonb`),
     /** Why. Required when sending a deal back — the brief asks for it, and a
@@ -493,6 +505,11 @@ export const auditEvents = pgTable(
     index('audit_events_transition').on(t.fromStatus, t.toStatus),
     /** Anything waiting on a given person, newest first. */
     index('audit_events_to_user').on(t.toUserId, t.createdAt),
+    /** The unread badge. Partial, so it stays small however long the log
+     *  grows — it only ever indexes what nobody has looked at yet. */
+    index('audit_events_unread')
+      .on(t.toUserId, t.createdAt)
+      .where(sql`${t.readAt} is null`),
     index('audit_events_created').on(t.createdAt),
 
     check('audit_events_seq', sql`${t.seq} >= 1`),
@@ -512,6 +529,14 @@ export const auditEvents = pgTable(
     check(
       'audit_events_to_user_by_direction',
       sql`case when ${t.direction} = 'in_place' then ${t.toUserId} is null else ${t.toUserId} is not null end`,
+    ),
+
+    /** Only something addressed to a person can be read by one. Without this,
+     *  an in-place edit could carry a read mark and quietly inflate the
+     *  "time to notice" figures it has nothing to do with. */
+    check(
+      'audit_events_read_by_direction',
+      sql`${t.readAt} is null or ${t.toUserId} is not null`,
     ),
   ],
 )

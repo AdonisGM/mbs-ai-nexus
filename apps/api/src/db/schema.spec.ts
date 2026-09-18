@@ -1,6 +1,8 @@
+import { and, eq, isNull } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { closeDb, resetDb, testDb } from '../test/db'
 import {
+  makeAuditEvent,
   makeBranch,
   makeCustomer,
   makeOpportunity,
@@ -436,6 +438,58 @@ describe('audit events', () => {
         heldMs: null,
       }),
       'audit_events_trace',
+    )
+  })
+
+  it('leaves a handover unread until someone looks at it', async () => {
+    const { owner, deal } = await aDeal()
+    const lead = await makeUser({ role: 'team_lead' })
+
+    const handover = await makeAuditEvent({
+      opportunityId: deal.id,
+      actorId: owner.id,
+      toUserId: lead.id,
+      toStatus: 'sale_confirmed',
+      direction: 'up',
+    })
+    expect(handover.readAt).toBeNull()
+
+    /** The unread badge is this query — no notifications table needed. */
+    const unread = await testDb
+      .select()
+      .from(auditEvents)
+      .where(and(eq(auditEvents.toUserId, lead.id), isNull(auditEvents.readAt)))
+    expect(unread).toHaveLength(1)
+
+    await testDb
+      .update(auditEvents)
+      .set({ readAt: new Date() })
+      .where(eq(auditEvents.id, handover.id))
+
+    const stillUnread = await testDb
+      .select()
+      .from(auditEvents)
+      .where(and(eq(auditEvents.toUserId, lead.id), isNull(auditEvents.readAt)))
+    expect(stillUnread).toHaveLength(0)
+  })
+
+  it('refuses a read mark on an edit addressed to nobody', async () => {
+    const { owner, deal } = await aDeal()
+
+    await expectViolation(
+      testDb.insert(auditEvents).values({
+        id: 'aud_read_edit',
+        opportunityId: deal.id,
+        seq: 1,
+        actorId: owner.id,
+        fromStatus: null,
+        toStatus: 'sale_reviewing',
+        direction: 'in_place',
+        toUserId: null,
+        heldMs: null,
+        readAt: new Date(),
+      }),
+      'audit_events_read_by_direction',
     )
   })
 

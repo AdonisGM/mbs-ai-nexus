@@ -57,6 +57,13 @@
       "when": 1789765527935,
       "tag": "0007_curved_the_order",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789766666252,
+      "tag": "0008_spooky_warpath",
+      "breakpoints": true
     }
   ]
 }
