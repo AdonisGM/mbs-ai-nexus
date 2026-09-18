@@ -11,6 +11,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -418,6 +419,104 @@ export const opportunities = pgTable(
 )
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * Audit events
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Every move a deal makes: who, when, what changed, and why.
+ *
+ *  Append-only, written inside the same transaction as the change it records,
+ *  so the log cannot disagree with the row it describes.
+ *
+ *  This table is also the data behind the approval-process charts, which is
+ *  why it carries two columns a plain audit trail would not:
+ *
+ *    heldMs  how long the deal sat in `fromStatus` before this move. Computed
+ *            once at write time. Without it, every timing chart becomes a
+ *            window function over the whole log, recomputed on each render,
+ *            and "average time from confirmed to supported" stops being a
+ *            one-line query.
+ *    seq     position within this deal's own history. Two events can land in
+ *            the same millisecond; a trace drawn from timestamps alone would
+ *            then render them in either order.
+ *
+ *  Between them the table answers, in one SELECT each: how many deals flowed
+ *  from each status to each other status (a Sankey, loop-backs included),
+ *  where deals sit longest, how often work is sent back, and the full trace
+ *  of any single deal. */
+export const auditEvents = pgTable(
+  'audit_events',
+  {
+    id: text('id').primaryKey(),
+    opportunityId: text('opportunity_id')
+      .notNull()
+      .references(() => opportunities.id, { onDelete: 'cascade' }),
+
+    /** Position in this deal's history, starting at 1. */
+    seq: integer('seq').notNull(),
+
+    /** Who did it. An admin acting on someone's behalf lands here like anyone
+     *  else — that is the point of keeping the technical account inside the
+     *  same log rather than beside it. */
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => users.id),
+
+    /** Null only on the first event, when the deal comes into being. */
+    fromStatus: text('from_status'),
+    toStatus: text('to_status').notNull(),
+
+    /** Which way the deal moved. Up is asking for something — a salesperson
+     *  confirming, a team lead escalating — and is gated. Down is handing work
+     *  out, and is not: taking on responsibility needs no permission.
+     *  `in_place` is an edit that changed no status. */
+    direction: text('direction').notNull(),
+    /** Who the deal was handed to, when it was handed to anyone. Drives the
+     *  team lead's "needs support" list and a salesperson's day. */
+    toUserId: text('to_user_id').references(() => users.id),
+
+    /** Milliseconds spent in `fromStatus`. Null on the first event. */
+    heldMs: bigint('held_ms', { mode: 'number' }),
+
+    /** Field-level before/after, e.g. { "value": [2000000000, 2500000000] }. */
+    changes: jsonb('changes').notNull().default(sql`'{}'::jsonb`),
+    /** Why. Required when sending a deal back — the brief asks for it, and a
+     *  rejection with no reason just costs the salesperson another round. */
+    reason: text('reason'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    /** One deal's trace, in order. Also enforces that no two events claim the
+     *  same position. */
+    uniqueIndex('audit_events_trace').on(t.opportunityId, t.seq),
+    /** Transition counts and per-step timings, for the flow charts. */
+    index('audit_events_transition').on(t.fromStatus, t.toStatus),
+    /** Anything waiting on a given person, newest first. */
+    index('audit_events_to_user').on(t.toUserId, t.createdAt),
+    index('audit_events_created').on(t.createdAt),
+
+    check('audit_events_seq', sql`${t.seq} >= 1`),
+    check('audit_events_direction', sql`${t.direction} in ('up', 'down', 'in_place')`),
+    check('audit_events_held_ms', sql`${t.heldMs} is null or ${t.heldMs} >= 0`),
+
+    /** The first event is the only one allowed to have no predecessor, and it
+     *  is also the only one with nothing to time. Keeping these two facts
+     *  locked together stops a gap appearing in the middle of a trace, which
+     *  would quietly bend every duration drawn from it. */
+    check(
+      'audit_events_first_event',
+      sql`(${t.fromStatus} is null) = (${t.seq} = 1) and (${t.heldMs} is null) = (${t.seq} = 1)`,
+    ),
+
+    /** A handover has to name someone; an in-place edit must not. */
+    check(
+      'audit_events_to_user_by_direction',
+      sql`case when ${t.direction} = 'in_place' then ${t.toUserId} is null else ${t.toUserId} is not null end`,
+    ),
+  ],
+)
+
+/* ──────────────────────────────────────────────────────────────────────────
  * Sessions
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -550,6 +649,13 @@ export type CreatedVia = (typeof CREATED_VIA)[number]
 /** Why a deal is stuck. A closed set so identical blockers group together
  *  across the branch — the first three come straight from the brief's two
  *  customer scenarios. */
+export type AuditEvent = typeof auditEvents.$inferSelect
+
+/** Which way a deal moved. Asking upward is gated by the two visibility
+ *  gates; handing work downward is not. */
+export const DIRECTIONS = ['up', 'down', 'in_place'] as const
+export type Direction = (typeof DIRECTIONS)[number]
+
 export const BLOCKER_CODES = [
   'rate',
   'speed',
