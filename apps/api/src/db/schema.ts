@@ -517,6 +517,84 @@ export const auditEvents = pgTable(
 )
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * Targets
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** What someone is expected to bring in over a period.
+ *
+ *  Small table, load-bearing: without it there is no gap, and without a gap
+ *  the branch manager's screen is a list of numbers with nothing to say. Every
+ *  question that makes the entry interesting — are we going to make it, what
+ *  is missing, which deal closes it — is a subtraction from a row in here.
+ *
+ *  One table covers a person and a whole unit rather than two, because the
+ *  branch manager's screen puts them side by side and a union of two shapes
+ *  would be paid for on every read.
+ *
+ *  A unit row is not the sum of its people's rows. Branches routinely carry a
+ *  number larger than what they hand out, so both are stored and neither is
+ *  derived. */
+export const targets = pgTable(
+  'targets',
+  {
+    id: text('id').primaryKey(),
+
+    /** `user` for one person, `unit` for a whole branch. */
+    scope: text('scope').notNull(),
+    /** Set on a user target, null on a unit target. */
+    ownerId: text('owner_id').references(() => users.id),
+    unitId: text('unit_id')
+      .notNull()
+      .references(() => units.id),
+    /** Narrows a unit target to one segment, so the branch manager can compare
+     *  the SSE team against the retail team. Null means the whole unit. */
+    segment: text('segment'),
+
+    /** Period label, `2026-Q3`. Text rather than a date range: everyone says
+     *  "quý ba", nobody says "1 July to 30 September", and a label groups and
+     *  sorts correctly as it is. */
+    period: text('period').notNull(),
+    /** The number, in whole đồng. */
+    amount: bigint('amount', { mode: 'number' }).notNull(),
+
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('targets_period').on(t.period),
+    index('targets_owner_period').on(t.ownerId, t.period),
+
+    check('targets_scope', sql`${t.scope} in ('user', 'unit')`),
+    check('targets_amount', sql`${t.amount} > 0`),
+    check('targets_segment', sql`${t.segment} is null or ${t.segment} in ('sse', 'rb')`),
+
+    /** A personal target names a person; a unit target must not, or it would
+     *  be counted twice — once as the branch's and once as someone's. */
+    check(
+      'targets_owner_by_scope',
+      sql`case when ${t.scope} = 'user' then ${t.ownerId} is not null else ${t.ownerId} is null end`,
+    ),
+
+    /** One number per person per period, and one per unit-and-segment per
+     *  period. Two rows for the same thing means the gap depends on which one
+     *  a query happens to read first, and the figure quietly stops matching
+     *  itself between two screens.
+     *
+     *  `coalesce` rather than a plain unique index because Postgres treats
+     *  NULLs as distinct, so unit rows — which have a null owner — would slip
+     *  past it entirely. */
+    uniqueIndex('targets_key').on(
+      t.scope,
+      sql`coalesce(${t.ownerId}, '')`,
+      t.unitId,
+      sql`coalesce(${t.segment}, '')`,
+      t.period,
+    ),
+  ],
+)
+
+/* ──────────────────────────────────────────────────────────────────────────
  * Sessions
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -650,6 +728,10 @@ export type CreatedVia = (typeof CREATED_VIA)[number]
  *  across the branch — the first three come straight from the brief's two
  *  customer scenarios. */
 export type AuditEvent = typeof auditEvents.$inferSelect
+export type Target = typeof targets.$inferSelect
+
+export const TARGET_SCOPES = ['user', 'unit'] as const
+export type TargetScope = (typeof TARGET_SCOPES)[number]
 
 /** Which way a deal moved. Asking upward is gated by the two visibility
  *  gates; handing work downward is not. */
