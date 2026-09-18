@@ -18,7 +18,14 @@ type ThemeStore = {
 
 const Ctx = createContext<ThemeStore | null>(null)
 
-const STORAGE_KEY = 'appearance'
+/** Namespaced, and bumped from the earlier unprefixed key.
+ *
+ *  Two reasons. A bare `appearance` is the sort of name another app on the
+ *  same origin also picks. And the earlier version wrote the default into
+ *  storage on mount, so every browser that opened the app once is holding a
+ *  "choice" of light that nobody made — changing the default would never
+ *  reach them. A new key retires those. */
+const STORAGE_KEY = 'nexus.appearance'
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
 type Saved = { mode: ThemeMode }
@@ -70,15 +77,27 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
-    } catch {
-      /** Nothing to do about it, and nothing worth breaking the page over. */
-    }
-  }, [theme, saved])
+  }, [theme])
 
+  /** Written only when someone actually picks a mode, never on mount.
+   *
+   *  Persisting the default made it indistinguishable from a real choice, and
+   *  a stored default outranks the default — so changing the default stopped
+   *  reaching anyone who had opened the app even once. */
   const value = useMemo<ThemeStore>(
-    () => ({ mode: saved.mode, theme, setMode: (mode) => setSaved({ mode }) }),
+    () => ({
+      mode: saved.mode,
+      theme,
+      setMode: (mode) => {
+        setSaved({ mode })
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode }))
+        } catch {
+          /** Private window or blocked site data. The choice still applies for
+           *  this visit; it just will not be remembered. */
+        }
+      },
+    }),
     [saved, theme],
   )
 
