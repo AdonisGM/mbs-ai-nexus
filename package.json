@@ -12,6 +12,7 @@
     "db:migrate": "pnpm --filter @nexus/api db:migrate",
     "seed": "pnpm --filter @nexus/api seed",
     "up": "docker compose up -d --build",
-    "down": "docker compose down"
+    "down": "docker compose down",
+    "seed:demo": "pnpm --filter @nexus/api seed:demo"
   }
 }
