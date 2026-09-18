@@ -17,8 +17,8 @@
          trắng. Đây là chỗ duy nhất được phép chép lại giá trị của tokens.css,
          sửa bên kia thì sửa cả bên này. -->
     <style>
-      html { background: #f1f2f3 }
-      html[data-theme='dark'] { background: #141617 }
+      html { background: #141617 }
+      html[data-theme='light'] { background: #f1f2f3 }
     </style>
 
     <!-- Đóng dấu chế độ màu trước khi trang vẽ nét đầu tiên. ThemeProvider
@@ -29,7 +29,7 @@
       (function () {
         try {
           var s = JSON.parse(localStorage.getItem('appearance') || '{}')
-          var mode = s.mode || 'light'
+          var mode = s.mode || 'dark'
           var dark =
             mode === 'dark' ||
             (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)

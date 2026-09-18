@@ -23,7 +23,11 @@ const DARK_QUERY = '(prefers-color-scheme: dark)'
 
 type Saved = { mode: ThemeMode }
 
-const FALLBACK: Saved = { mode: 'light' }
+/** Dark by default. Must stay in step with the pre-paint script in
+ *  index.html: if the two disagree the page renders one theme, then swaps to
+ *  the other a frame later, which is exactly the flash that script exists to
+ *  prevent. */
+const FALLBACK: Saved = { mode: 'dark' }
 
 function readSaved(): Saved {
   try {
