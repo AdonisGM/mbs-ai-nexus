@@ -1,0 +1,6 @@
+packages:
+  - "apps/*"
+
+# drizzle-kit needs esbuild to fetch its binary during install
+allowBuilds:
+  esbuild: true

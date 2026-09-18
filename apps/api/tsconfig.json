@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "node16",
+    "target": "ES2023",
+    "moduleResolution": "node16",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": false,
+    "removeComments": true,
+    "sourceMap": false,
+    "inlineSourceMap": false,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "esModuleInterop": true
+  },
+  "include": ["src"]
+}

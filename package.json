@@ -1,0 +1,17 @@
+{
+  "name": "mbs-ai-nexus",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @nexus/web dev",
+    "dev:api": "pnpm --filter @nexus/api dev",
+    "build": "pnpm --filter @nexus/web build",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose stop db",
+    "db:generate": "pnpm --filter @nexus/api db:generate",
+    "db:migrate": "pnpm --filter @nexus/api db:migrate",
+    "seed": "pnpm --filter @nexus/api seed",
+    "up": "docker compose up -d --build",
+    "down": "docker compose down"
+  }
+}
