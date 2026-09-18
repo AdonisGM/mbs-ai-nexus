@@ -50,6 +50,20 @@ function ownerFilter(user: User): SQL | undefined {
   }
 }
 
+/** Whether this person may put a record in someone's name.
+ *
+ *  Assigning is bounded by the same tree as reading: a team lead may hand a
+ *  customer to one of their own people, never to a peer's. Without this, the
+ *  scope on the way out is decorative — anyone could push a row into a
+ *  colleague's book and it would simply vanish from their own screen. */
+export async function canAssignTo(db: Db, actor: User, ownerId: string): Promise<boolean> {
+  const filter = ownerFilter(actor)
+  const where = filter ? and(eq(users.id, ownerId), filter) : eq(users.id, ownerId)
+
+  const [found] = await db.select({ id: users.id }).from(users).where(where).limit(1)
+  return Boolean(found)
+}
+
 /** Customers this person may see. */
 export function customerScope(db: Db, user: User): SQL | undefined {
   const filter = ownerFilter(user)
