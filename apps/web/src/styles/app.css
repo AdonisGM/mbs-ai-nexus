@@ -333,26 +333,3 @@
 }
 .ProseMirror.resize-cursor { cursor: col-resize }
 
-/* Vệt chạy trên màn chờ. Không phải thanh tiến độ — không có gì ở đây biết
-   chốt chặn định tuyến còn mất bao lâu — nhưng một màn hình đứng im hoàn toàn
-   thì sau chừng một giây người ta đọc ra là treo. */
-@keyframes splash-sweep {
-  0% { transform: translateX(-100%) }
-  100% { transform: translateX(420%) }
-}
-
-/* Viết tay thay vì dùng animate-[...] của Tailwind: giá trị tuỳ ý có dấu chấm
-   và gạch dưới không được sinh ra, nên keyframes vẫn nằm đó mà vệt thì đứng im
-   — đúng kiểu hỏng lặng lẽ, build sạch mà màn hình sai. */
-.splash-sweep {
-  animation: splash-sweep 1.1s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Người tắt hiệu ứng thì thấy một vạch đứng yên, vẫn đủ nói "đang chờ". */
-  .splash-sweep {
-    animation: none;
-    width: 100%;
-    opacity: 0.4;
-  }
-}

@@ -129,7 +129,18 @@ export const vi = {
   'field.product': 'Sản phẩm',
   'field.need': 'Nhu cầu',
 
+  'common.all': 'Tất cả',
   'common.search': 'Tìm kiếm',
+
+  'customers.searchPlaceholder': 'Tìm theo tên hoặc mã khách hàng',
+  'customers.empty': 'Chưa có khách hàng nào',
+  'customers.noMatch': 'Không tìm thấy khách hàng nào khớp',
+  /** Ai đang xem quyết định thấy được gì, nên màn hình nói thẳng ra thay vì
+   *  để người ta tự hỏi sao danh sách của đồng nghiệp lại dài hơn. */
+  'customers.scope.sale': 'Khách hàng bạn đang phụ trách',
+  'customers.scope.team_lead': 'Khách hàng của các nhân viên bạn quản lý',
+  'customers.scope.bm': 'Toàn bộ khách hàng của đơn vị',
+  'customers.scope.admin': 'Toàn bộ khách hàng, mọi đơn vị',
   'common.overdue': 'Quá hạn',
   'common.dueToday': 'Đến hạn hôm nay',
   'common.noDeadline': 'Chưa có hạn',
