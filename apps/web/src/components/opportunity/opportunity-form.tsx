@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { ApiError } from '~/api/client'
 import {
   BLOCKER_CODES,
   STAGES,
@@ -11,7 +10,8 @@ import {
 import { inputBase } from '~/components/ui/form-controls'
 import { Modal } from '~/components/ui/modal'
 import { Button, cx } from '~/components/ui/primitives'
-import { t, tCode, tError } from '~/i18n'
+import { t, tCode } from '~/i18n'
+import { useWriteError } from '~/lib/use-write-error'
 import { fmtMoney } from '~/lib/format'
 
 /** Opening a new deal on a customer.
@@ -34,6 +34,7 @@ export function OpportunityForm({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
+  const onWriteError = useWriteError()
 
   const [product, setProduct] = useState('')
   const [need, setNeed] = useState('')
@@ -77,9 +78,7 @@ export function OpportunityForm({
       reset()
       onClose()
     },
-    onError: (error) => {
-      toast.error(tError(error instanceof ApiError ? error.message : null))
-    },
+    onError: (error) => void onWriteError(error, '/customers'),
   })
 
   const ready =

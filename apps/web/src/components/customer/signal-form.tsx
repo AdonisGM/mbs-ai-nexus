@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { ApiError } from '~/api/client'
 import { createSignal, SIGNAL_TYPES, type SignalType } from '~/api/signals'
 import { inputBase } from '~/components/ui/form-controls'
 import { Modal } from '~/components/ui/modal'
 import { Button, cx } from '~/components/ui/primitives'
-import { t, tError } from '~/i18n'
+import { t } from '~/i18n'
+import { useWriteError } from '~/lib/use-write-error'
 
 /** Recording what just happened with a customer.
  *
@@ -30,6 +30,7 @@ export function SignalForm({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
+  const onWriteError = useWriteError()
 
   const [rawNote, setRawNote] = useState('')
   const [content, setContent] = useState('')
@@ -59,9 +60,7 @@ export function SignalForm({
       reset()
       onClose()
     },
-    onError: (error) => {
-      toast.error(tError(error instanceof ApiError ? error.message : null))
-    },
+    onError: (error) => void onWriteError(error, '/customers'),
   })
 
   const ready = (rawNote.trim() || content.trim()).length > 0 && !save.isPending

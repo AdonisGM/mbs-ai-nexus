@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { ApiError } from '~/api/client'
 import {
   actOnOpportunity,
   type OfferedAction,
@@ -10,7 +9,8 @@ import {
 import { inputBase } from '~/components/ui/form-controls'
 import { Modal } from '~/components/ui/modal'
 import { Button, cx } from '~/components/ui/primitives'
-import { t, tError } from '~/i18n'
+import { t } from '~/i18n'
+import { useWriteError } from '~/lib/use-write-error'
 
 /** The moves the signed-in person may make on a deal.
  *
@@ -22,6 +22,7 @@ import { t, tError } from '~/i18n'
  *  no reason just sends the salesperson round again, guessing. */
 export function ActionBar({ deal }: { deal: OpportunityWithActions }) {
   const queryClient = useQueryClient()
+  const onWriteError = useWriteError()
   const [asking, setAsking] = useState<OfferedAction | null>(null)
   const [reason, setReason] = useState('')
 
@@ -39,9 +40,7 @@ export function ActionBar({ deal }: { deal: OpportunityWithActions }) {
       toast.success(t(`actionDone.${action}` as never))
       close()
     },
-    onError: (error) => {
-      toast.error(tError(error instanceof ApiError ? error.message : null))
-    },
+    onError: (error) => void onWriteError(error),
   })
 
   function close() {

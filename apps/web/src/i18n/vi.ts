@@ -272,6 +272,7 @@ export const vi = {
   'error.owner_segment_mismatch': 'Người phụ trách không phụ trách phân khúc này',
   'error.only_bm_sets_targets': 'Chỉ giám đốc đơn vị đặt được chỉ tiêu',
   'error.unexpected_response': 'Máy chủ không phản hồi đúng',
+  'error.gone': 'Dữ liệu đã thay đổi trên máy chủ, đang tải lại',
   'error.unknown': 'Có lỗi xảy ra, vui lòng thử lại',
 } satisfies Record<string, string>
 
