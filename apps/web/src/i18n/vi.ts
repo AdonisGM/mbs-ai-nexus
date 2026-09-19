@@ -10,6 +10,8 @@
  *  rather than `leadPage.label3`. Screens get rearranged; the domain does not. */
 export const vi = {
   'app.name': 'MSB AI Nexus',
+  /** Just the product half, for where the bank's own mark sits beside it. */
+  'app.product': 'AI Nexus',
   'app.tagline': 'Nền tảng AI điều hành bán hàng đa tầng',
 
   'nav.today': 'Việc hôm nay',

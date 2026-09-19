@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { SegmentedControl } from '~/components/ui/segmented'
 import { t } from '~/i18n'
+import { MsbLogo } from './msb-logo'
 import { useTheme } from './theme'
 
 /** The frame around signing in: grain, a light/dark switch, nothing else.
@@ -40,51 +41,18 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   )
 }
 
-/** Mark and wordmark together.
+/** The bank's mark, then the product name.
  *
- *  The mark is three stacked plates — the salesperson, the team lead and the
- *  branch manager, which is the whole idea of the product in one shape. It is
- *  deliberately a neutral geometric placeholder rather than anything resembling
- *  a bank's real identity; swapping in an official asset later is this one
- *  component.
- *
- *  It draws in `currentColor` and the frame sets `text-ink`, so light and dark
- *  are handled without a second file. */
+ *  Two pieces rather than one lockup, separated by a hairline: MSB is the
+ *  institution and AI Nexus is a thing built inside it, and running the two
+ *  together as a single wordmark would claim a brand that does not exist. The
+ *  divider says "from" without needing the word. */
 export function BrandLockup() {
   return (
-    <div className="flex items-center gap-2.5">
-      <svg
-        width="26"
-        height="26"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-        className="shrink-0"
-      >
-        <path
-          d="M12 3.2 20.5 7.6 12 12 3.5 7.6 12 3.2Z"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M4.4 12 12 15.9 19.6 12"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.62"
-        />
-        <path
-          d="M4.4 16.3 12 20.2 19.6 16.3"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity="0.34"
-        />
-      </svg>
-      <span className="text-[21px] font-semibold tracking-tight">{t('app.name')}</span>
+    <div className="flex items-center gap-3">
+      <MsbLogo height={24} />
+      <span className="h-5 w-px bg-line2" aria-hidden="true" />
+      <span className="text-[17px] font-semibold tracking-tight">{t('app.product')}</span>
     </div>
   )
 }
