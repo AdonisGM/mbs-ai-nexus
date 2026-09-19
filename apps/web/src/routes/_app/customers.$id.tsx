@@ -2,6 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { customerQuery, type Customer } from '~/api/customers'
+import { OpportunityList } from '~/components/customer/opportunity-list'
+import { SignalTimeline } from '~/components/customer/signal-timeline'
 import { Card, CardTitle, Chip, Label, Money, Mono } from '~/components/ui/primitives'
 import { BlockSkeleton, ErrorState } from '~/components/ui/query-state'
 import { t } from '~/i18n'
@@ -136,12 +138,24 @@ function CustomerScreen() {
         </div>
       </div>
 
-      {/** Signals and opportunities belong on this screen and are next. Saying
-        *  so beats an empty panel that looks like a bug. */}
-      <Card>
-        <CardTitle>Tín hiệu và cơ hội</CardTitle>
-        <p className="mt-2 text-[12.5px] text-muted">Đang dựng.</p>
-      </Card>
+      {/** The two halves of what is actually happening with this customer,
+        *  side by side: what has been observed, and what is being sold on the
+        *  back of it. */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <Card>
+          <CardTitle>Cơ hội</CardTitle>
+          <div className="mt-3">
+            <OpportunityList customerId={customer.id} />
+          </div>
+        </Card>
+
+        <Card>
+          <CardTitle>Dòng tín hiệu</CardTitle>
+          <div className="mt-3">
+            <SignalTimeline customerId={customer.id} />
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }
