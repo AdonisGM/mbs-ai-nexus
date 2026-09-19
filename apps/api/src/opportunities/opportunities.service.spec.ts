@@ -117,6 +117,44 @@ describe('create', () => {
   })
 })
 
+describe('what the screen may offer', () => {
+  /** The buttons come from the server with the rows. A screen that worked them
+   *  out itself would eventually offer one the server refuses, and the person
+   *  pressing it would see a form clear itself for no visible reason. */
+  it('carries the available actions on every row of the list', async () => {
+    const s = await scene()
+    await aDeal(s)
+
+    const page = await service.list(s.saleRb, {})
+    expect(page.rows[0].actions.map((a) => a.action)).toEqual(['confirm'])
+  })
+
+  it('says which of them need a reason', async () => {
+    const s = await scene()
+    const deal = await aDeal(s)
+    await service.act(s.saleRb, deal.id, 'confirm')
+
+    const page = await service.list(s.leadRb, {})
+    const offered = Object.fromEntries(
+      page.rows[0].actions.map((a) => [a.action, a.requiresReason]),
+    )
+
+    expect(offered.send_back).toBe(true)
+    expect(offered.escalate).toBe(true)
+    expect(offered.coach).toBe(false)
+    expect(offered.view).toBe(false)
+  })
+
+  it('offers a salesperson nothing on a deal that is already up the chain', async () => {
+    const s = await scene()
+    const deal = await aDeal(s)
+    await service.act(s.saleRb, deal.id, 'confirm')
+
+    const page = await service.list(s.saleRb, {})
+    expect(page.rows[0].actions.map((a) => a.action)).not.toContain('confirm')
+  })
+})
+
 describe('confirm', () => {
   it('is the first gate: nothing reaches the team lead before it', async () => {
     const s = await scene()

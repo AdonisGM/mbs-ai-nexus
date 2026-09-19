@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { customerQuery, type Customer } from '~/api/customers'
 import { SignalForm } from '~/components/customer/signal-form'
+import { OpportunityForm } from '~/components/opportunity/opportunity-form'
 import { SignalTimeline } from '~/components/customer/signal-timeline'
 import { OpportunityTable } from '~/components/opportunity/opportunity-table'
 import { Button, Card, CardTitle, Chip, Mono } from '~/components/ui/primitives'
@@ -25,6 +26,7 @@ function CustomerScreen() {
   const { id } = Route.useParams()
   const query = useQuery(customerQuery(id))
   const [noting, setNoting] = useState(false)
+  const [adding, setAdding] = useState(false)
 
   if (query.isError) {
     return (
@@ -52,7 +54,11 @@ function CustomerScreen() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Header customer={customer} onQuickNote={() => setNoting(true)} />
+      <Header
+        customer={customer}
+        onQuickNote={() => setNoting(true)}
+        onAddOpportunity={() => setAdding(true)}
+      />
       <OpportunityTable customerId={customer.id} />
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr_1fr]">
@@ -123,6 +129,12 @@ function CustomerScreen() {
         open={noting}
         onClose={() => setNoting(false)}
       />
+
+      <OpportunityForm
+        customerId={customer.id}
+        open={adding}
+        onClose={() => setAdding(false)}
+      />
     </div>
   )
 }
@@ -132,9 +144,11 @@ function CustomerScreen() {
 function Header({
   customer,
   onQuickNote,
+  onAddOpportunity,
 }: {
   customer: Customer
   onQuickNote: () => void
+  onAddOpportunity: () => void
 }) {
   const facts = [
     { label: t('customers.revenue'), value: customer.revenue ? fmtMoney(customer.revenue) : '—' },
@@ -183,7 +197,7 @@ function Header({
           <Link to="/customers/$id/edit" params={{ id: customer.id }}>
             <Button size="md">{t('common.edit')}</Button>
           </Link>
-          <Button size="md" variant="primary" disabled>
+          <Button size="md" variant="primary" onClick={onAddOpportunity}>
             {t('opportunities.add')}
           </Button>
         </div>

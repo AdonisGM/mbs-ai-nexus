@@ -35,8 +35,26 @@ export type Opportunity = {
   updatedAt: string
 }
 
+/** What the signed-in person may press on this deal, and what each press
+ *  needs. Comes from the server so the screen never offers a move the server
+ *  would then refuse. */
+export type OfferedAction = {
+  action:
+    | 'confirm'
+    | 'view'
+    | 'send_back'
+    | 'coach'
+    | 'escalate'
+    | 'decide'
+    | 'complete'
+    | 'close'
+  requiresReason: boolean
+}
+
+export type OpportunityWithActions = Opportunity & { actions: OfferedAction[] }
+
 export type OpportunityPage = {
-  rows: Opportunity[]
+  rows: OpportunityWithActions[]
   total: number
   page: number
   pageSize: number
@@ -72,4 +90,72 @@ export function opportunitiesQuery(query: OpportunityQuery) {
     queryFn: () => api<OpportunityPage>(`/opportunities${toSearch(query)}`),
     placeholderData: (previous) => previous,
   })
+}
+
+export type ActBody = {
+  reason?: string
+  missingInfo?: string[]
+  nextAction?: string
+  dueDate?: string
+  bmDecision?: string
+  winProbability?: number
+}
+
+export function actOnOpportunity(id: string, action: string, body: ActBody = {}) {
+  return api<Opportunity>(`/opportunities/${id}/actions/${action}`, {
+    method: 'POST',
+    body,
+  })
+}
+
+export type NewOpportunity = {
+  customerId: string
+  product: string
+  need: string
+  value: number
+  stage?: string
+  winProbability?: number
+  dueDate?: string
+  blockerCode?: string
+  blockerNote?: string
+  nextAction?: string
+  supportNeeded?: string
+  missingInfo?: string[]
+}
+
+export function createOpportunity(body: NewOpportunity) {
+  return api<Opportunity>('/opportunities', { method: 'POST', body })
+}
+
+export const STAGES = [
+  'prospecting',
+  'discovery',
+  'proposal',
+  'negotiation',
+  'documentation',
+  'closing',
+] as const
+
+export const BLOCKER_CODES = [
+  'rate',
+  'speed',
+  'experience',
+  'documents',
+  'collateral',
+  'policy',
+  'competitor',
+  'customer_hesitation',
+  'other',
+] as const
+
+/** Default conversion chance per stage. Mirrors the server, which applies the
+ *  same defaults when the field is left out — shown here so the number is
+ *  visible before saving rather than appearing afterwards. */
+export const STAGE_WIN_PROBABILITY: Record<string, number> = {
+  prospecting: 10,
+  discovery: 25,
+  proposal: 50,
+  negotiation: 70,
+  documentation: 85,
+  closing: 100,
 }

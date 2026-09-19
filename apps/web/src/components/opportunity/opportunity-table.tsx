@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { opportunitiesQuery, type Opportunity } from '~/api/opportunities'
+import { opportunitiesQuery, type OpportunityWithActions } from '~/api/opportunities'
+import { ActionBar } from '~/components/opportunity/action-bar'
 import { ApprovalFlow } from '~/components/opportunity/approval-flow'
 import { ChevronRight } from 'lucide-react'
-import { Button, Chip, Money, cx } from '~/components/ui/primitives'
+import { Chip, Money, cx } from '~/components/ui/primitives'
 import { BlockSkeleton } from '~/components/ui/query-state'
 import { t, tCode } from '~/i18n'
 import { LANES, holderLabel, laneStates } from '~/lib/approval'
@@ -87,7 +88,7 @@ function Row({
   open,
   onToggle,
 }: {
-  deal: Opportunity
+  deal: OpportunityWithActions
   open: boolean
   onToggle: () => void
 }) {
@@ -191,7 +192,7 @@ function ApprovalBar({ status }: { status: string }) {
   )
 }
 
-function StatusChip({ deal }: { deal: Opportunity }) {
+function StatusChip({ deal }: { deal: OpportunityWithActions }) {
   if (deal.outcome === 'won') {
     return (
       <Chip tone={{ fg: 'var(--success)', bg: 'var(--success-soft)' }}>{t('outcome.won')}</Chip>
@@ -211,7 +212,7 @@ function StatusChip({ deal }: { deal: Opportunity }) {
  *
  *  Only coloured while the deal is open: a closed deal that ran past its date
  *  is history, not something anyone can still act on. */
-function Due({ deal }: { deal: Opportunity }) {
+function Due({ deal }: { deal: OpportunityWithActions }) {
   const days = daysUntil(deal.dueDate)
   const live = deal.outcome === 'open'
 
@@ -238,7 +239,7 @@ function Due({ deal }: { deal: Opportunity }) {
  *
  *  The actions come from the server with the deal, so nothing is offered here
  *  that the server would then refuse. */
-function Footer({ deal }: { deal: Opportunity }) {
+function Footer({ deal }: { deal: OpportunityWithActions }) {
   const notes = [
     deal.blockerCode
       ? `${t('field.blocker')}: ${tCode('blocker', deal.blockerCode, deal.blockerCode)}${
@@ -255,17 +256,8 @@ function Footer({ deal }: { deal: Opportunity }) {
       <div className="max-w-[660px] pl-5 text-[12.5px] leading-relaxed text-muted">
         {notes.length > 0 ? notes.join(' · ') : t('opportunities.noNote')}
       </div>
-      {/** Buttons are next: they post to /opportunities/:id/actions/:action,
-        *  which is already built and tested. Kept out until the confirm and
-        *  send-back dialogs exist, because a button that needs a reason and
-        *  has nowhere to type one fails on the server every time. */}
-      <div className="flex flex-none gap-2">
-        <Button size="sm" disabled>
-          {t('action.send_back')}
-        </Button>
-        <Button size="sm" variant="primary" disabled>
-          {t('action.confirm')}
-        </Button>
+      <div className="flex-none">
+        <ActionBar deal={deal} />
       </div>
     </div>
   )

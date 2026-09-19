@@ -167,5 +167,23 @@ export function availableActions(role: Role, from: ApprovalStatus): ActionName[]
   )
 }
 
+/** The buttons to offer, with what each one needs.
+ *
+ *  Returned to the screen rather than letting it work this out, so the rule
+ *  about which moves demand a reason lives in one place. A screen that guessed
+ *  would eventually guess wrong and post something the server rejects — and
+ *  the person on the other end would see a form clear itself for no reason
+ *  they could see. */
+export type OfferedAction = { action: ActionName; requiresReason: boolean }
+
+export function actionsFor(role: Role, from: ApprovalStatus): OfferedAction[] {
+  return TRANSITIONS.filter((transition) => allows(transition, role, from)).map(
+    (transition) => ({
+      action: transition.action,
+      requiresReason: transition.requiresReason ?? false,
+    }),
+  )
+}
+
 /** States a deal can never leave. */
 export const TERMINAL_STATUSES: readonly ApprovalStatus[] = ['completed', 'closed_lost']

@@ -24,7 +24,7 @@ import {
   type User,
 } from '../db/schema'
 import type { ActDto, CreateOpportunityDto, ListOpportunitiesDto, UpdateOpportunityDto } from './dto'
-import { allows, availableActions, findTransition, type ActionName } from './transitions'
+import { actionsFor, allows, findTransition, type ActionName } from './transitions'
 
 export const DEFAULT_PAGE_SIZE = 25
 
@@ -80,7 +80,18 @@ export class OpportunitiesService {
       this.db.select({ total: count() }).from(opportunities).where(where),
     ])
 
-    return { rows, total, page, pageSize }
+    return {
+      rows: rows.map((row) => ({
+        ...row,
+        /** Carried on every row, not just on a single fetch. The buttons sit
+         *  in the expanded row, and asking the server per row for its own
+         *  buttons is a request per row on a list built to open several. */
+        actions: actionsFor(user.role as Role, row.approvalStatus as ApprovalStatus),
+      })),
+      total,
+      page,
+      pageSize,
+    }
   }
 
   /** One deal, plus the buttons this person may press on it.
@@ -99,7 +110,7 @@ export class OpportunitiesService {
 
     return {
       ...row,
-      actions: availableActions(user.role as Role, row.approvalStatus as ApprovalStatus),
+      actions: actionsFor(user.role as Role, row.approvalStatus as ApprovalStatus),
     }
   }
 
