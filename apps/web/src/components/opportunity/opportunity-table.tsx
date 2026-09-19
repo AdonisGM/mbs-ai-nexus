@@ -8,12 +8,12 @@ import { BlockSkeleton } from '~/components/ui/query-state'
 import { t, tCode } from '~/i18n'
 import { LANES, holderLabel, laneStates } from '~/lib/approval'
 import { daysUntil, vnDate } from '~/lib/dates'
-import { fmtShort } from '~/lib/format'
+import { fmtMoney } from '~/lib/format'
 
 /** Grid used by the header and every row, declared once so the two cannot
  *  drift apart — a header that no longer lines up with its columns is the
  *  classic way a hand-built table goes wrong. */
-export const COLS = 'grid-cols-[120px_minmax(0,1fr)_120px_130px_78px_190px_100px]'
+export const COLS = 'grid-cols-[120px_minmax(0,1fr)_160px_130px_72px_180px_100px]'
 
 /** Every deal on a customer, with the approval trace one click away.
  *
@@ -45,7 +45,7 @@ export function OpportunityTable({ customerId }: { customerId: string }) {
 
       <div className="overflow-hidden rounded-xl border border-line bg-surface">
         <div className="overflow-x-auto">
-          <div className="min-w-[980px]">
+          <div className="min-w-[1040px]">
             <div
               className={cx(
                 'grid gap-3 bg-sunken px-4 py-2.5 text-[10px] font-medium tracking-[.06em] text-muted uppercase',
@@ -130,7 +130,7 @@ function Row({
           <div className="truncate text-[11.5px] text-muted">{deal.need}</div>
         </div>
         <div className="text-right">
-          <Money value={fmtShort(deal.value)} size="md" />
+          <Money value={fmtMoney(deal.value)} size="md" />
         </div>
         <div>
           <StatusChip deal={deal} />

@@ -6,7 +6,7 @@ import { Chip, Mono, Money } from '~/components/ui/primitives'
 import { ErrorState, Refreshing, ReloadButton, TableSkeleton } from '~/components/ui/query-state'
 import { PillGroup, SearchInput, Toolbar, ToolbarCount } from '~/components/ui/toolbar'
 import { t, tCode } from '~/i18n'
-import { fmtShort } from '~/lib/format'
+import { fmtMoney } from '~/lib/format'
 import { useTableState } from '~/lib/table-state'
 import { useDebounced } from '~/lib/use-debounced'
 
@@ -68,12 +68,12 @@ function CustomersScreen() {
     {
       id: 'revenue',
       header: 'Doanh số',
-      meta: { width: '120px', align: 'right' },
+      meta: { width: '165px', align: 'right' },
       cell: ({ row }) =>
         row.original.revenue === null ? (
           <span className="text-muted">—</span>
         ) : (
-          <Money value={fmtShort(row.original.revenue)} />
+          <Money value={fmtMoney(row.original.revenue)} />
         ),
     },
     {

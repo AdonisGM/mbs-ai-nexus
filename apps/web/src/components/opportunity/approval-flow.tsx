@@ -3,7 +3,7 @@ import { historyQuery, type HistoryEvent } from '~/api/history'
 import { Chip, cx } from '~/components/ui/primitives'
 import { t, tCode } from '~/i18n'
 import { LANES, laneIndex, toneOf } from '~/lib/approval'
-import { fmtDuration, fmtShort } from '~/lib/format'
+import { fmtDuration, fmtMoney } from '~/lib/format'
 import { vnDate } from '~/lib/dates'
 import { COLS } from './opportunity-table'
 
@@ -192,7 +192,7 @@ function formatValue(field: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (Array.isArray(value)) return value.length === 0 ? '—' : value.join(', ')
   if (typeof value === 'object') return '…'
-  if (field === 'value' && typeof value === 'number') return fmtShort(value)
+  if (field === 'value' && typeof value === 'number') return fmtMoney(value)
   if (field === 'winProbability') return `${value}%`
   if (field === 'dueDate') return vnDate(String(value))
   if (field === 'stage') return tCode('stage', String(value), String(value))

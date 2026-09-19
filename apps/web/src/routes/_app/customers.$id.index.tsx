@@ -10,7 +10,7 @@ import { Button, Card, CardTitle, Chip, Mono } from '~/components/ui/primitives'
 import { BlockSkeleton, ErrorState } from '~/components/ui/query-state'
 import { t } from '~/i18n'
 import { vnDate } from '~/lib/dates'
-import { fmtShort } from '~/lib/format'
+import { fmtMoney } from '~/lib/format'
 import { ATTRIBUTE_LABELS, SEGMENT_TONE } from '~/lib/customer'
 
 export const Route = createFileRoute('/_app/customers/$id/')({ component: CustomerScreen })
@@ -137,7 +137,7 @@ function Header({
   onQuickNote: () => void
 }) {
   const facts = [
-    { label: t('customers.revenue'), value: customer.revenue ? fmtShort(customer.revenue) : '—' },
+    { label: t('customers.revenue'), value: customer.revenue ? fmtMoney(customer.revenue) : '—' },
     { label: t('customers.contactName'), value: customer.contactName ?? '—' },
     { label: t('customers.contactPhone'), value: customer.contactPhone ?? '—' },
     {
