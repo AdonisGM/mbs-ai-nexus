@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { and, asc, count, desc, eq, isNull, max, sql, type SQL } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { customerScope, opportunityScope, type OpportunityView } from '../auth/scope'
 import { DB, type Db } from '../db/db.module'
 import {
@@ -326,13 +327,40 @@ export class OpportunitiesService {
   }
 
   /** The full trace of one deal, oldest first — the data behind the approval
-   *  charts and the history panel. */
+   *  charts and the history panel.
+   *
+   *  Names and roles come back with it rather than as bare ids. The screen
+   *  shows who did each step and which tier they were acting from, and making
+   *  it fetch the roster separately to find that out would mean one request
+   *  per expanded row on a list where several can be open at once. */
   async history(user: User, id: string) {
     await this.get(user, id)
 
+    const actor = alias(users, 'actor')
+    const recipient = alias(users, 'recipient')
+
     return this.db
-      .select()
+      .select({
+        id: auditEvents.id,
+        seq: auditEvents.seq,
+        fromStatus: auditEvents.fromStatus,
+        toStatus: auditEvents.toStatus,
+        direction: auditEvents.direction,
+        heldMs: auditEvents.heldMs,
+        readAt: auditEvents.readAt,
+        changes: auditEvents.changes,
+        reason: auditEvents.reason,
+        createdAt: auditEvents.createdAt,
+        actorId: auditEvents.actorId,
+        actorName: actor.name,
+        actorRole: actor.role,
+        toUserId: auditEvents.toUserId,
+        toUserName: recipient.name,
+        toUserRole: recipient.role,
+      })
       .from(auditEvents)
+      .innerJoin(actor, eq(actor.id, auditEvents.actorId))
+      .leftJoin(recipient, eq(recipient.id, auditEvents.toUserId))
       .where(eq(auditEvents.opportunityId, id))
       .orderBy(asc(auditEvents.seq))
   }

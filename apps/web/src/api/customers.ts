@@ -63,3 +63,22 @@ export function customerQuery(id: string) {
     queryFn: () => api<Customer>(`/customers/${id}`),
   })
 }
+
+export type UpdateCustomerBody = {
+  name?: string
+  ownerId?: string
+  currentProducts?: string[]
+  revenue?: number
+  relationStage?: string
+  attributes?: Record<string, unknown>
+  contactName?: string
+  contactPhone?: string
+  note?: string
+}
+
+/** `segment` is deliberately absent: moving a customer between segments would
+ *  strand their open deals in the other pipeline, so it is not something an
+ *  edit form gets to do. The server refuses it too. */
+export function updateCustomer(id: string, body: UpdateCustomerBody) {
+  return api<Customer>(`/customers/${id}`, { method: 'PATCH', body })
+}

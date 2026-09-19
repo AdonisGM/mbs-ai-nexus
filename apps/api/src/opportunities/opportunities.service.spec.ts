@@ -552,6 +552,39 @@ describe('the whole six-step flow', () => {
     expect(history.map((row) => row.seq)).toEqual([1, 2])
   })
 
+  /** The screen shows who did each step and which tier they acted from.
+   *  Returning bare ids would make it fetch the roster separately — one
+   *  request per expanded row, on a list where several can be open at once. */
+  it('names the person behind each step and the tier they acted from', async () => {
+    const s = await scene()
+    const deal = await aDeal(s)
+    await service.act(s.saleRb, deal.id, 'confirm')
+    await service.act(s.leadRb, deal.id, 'escalate', { reason: 'Rate' })
+
+    const history = await service.history(s.saleRb, deal.id)
+
+    expect(history.map((row) => row.actorName)).toEqual([
+      s.saleRb.name,
+      s.saleRb.name,
+      s.leadRb.name,
+    ])
+    expect(history.map((row) => row.actorRole)).toEqual(['sale', 'sale', 'team_lead'])
+  })
+
+  it('names who each handover went to, and leaves it out when nobody', async () => {
+    const s = await scene()
+    const deal = await aDeal(s)
+    await service.act(s.saleRb, deal.id, 'confirm')
+
+    const history = await service.history(s.saleRb, deal.id)
+
+    /** The opening event hands the deal to nobody; the confirmation hands it
+     *  up to the team lead. */
+    expect(history[0].toUserName).toBeNull()
+    expect(history[1].toUserName).toBe(s.leadRb.name)
+    expect(history[1].toUserRole).toBe('team_lead')
+  })
+
   it("keeps the history of a deal out of another team's reach", async () => {
     const s = await scene()
     const deal = await aDeal(s)
