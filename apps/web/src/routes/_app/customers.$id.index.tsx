@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { customerQuery, type Customer } from '~/api/customers'
+import { SignalForm } from '~/components/customer/signal-form'
 import { SignalTimeline } from '~/components/customer/signal-timeline'
 import { OpportunityTable } from '~/components/opportunity/opportunity-table'
 import { Button, Card, CardTitle, Chip, Mono } from '~/components/ui/primitives'
@@ -22,6 +24,7 @@ export const Route = createFileRoute('/_app/customers/$id/')({ component: Custom
 function CustomerScreen() {
   const { id } = Route.useParams()
   const query = useQuery(customerQuery(id))
+  const [noting, setNoting] = useState(false)
 
   if (query.isError) {
     return (
@@ -49,7 +52,7 @@ function CustomerScreen() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Header customer={customer} />
+      <Header customer={customer} onQuickNote={() => setNoting(true)} />
       <OpportunityTable customerId={customer.id} />
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr_1fr]">
@@ -89,7 +92,19 @@ function CustomerScreen() {
         </Card>
 
         <Card>
-          <CardTitle>{t('customers.signals')}</CardTitle>
+          <div className="flex items-baseline justify-between gap-3">
+            <CardTitle>{t('customers.signals')}</CardTitle>
+            {/** The second way in. The header button is where someone goes
+              *  with a note in mind; this one is where they end up after
+              *  reading the timeline and realising something is missing. */}
+            <button
+              type="button"
+              onClick={() => setNoting(true)}
+              className="text-[11.5px] text-muted transition-colors hover:text-ink"
+            >
+              {t('signals.add')}
+            </button>
+          </div>
           <div className="mt-3">
             <SignalTimeline customerId={customer.id} />
           </div>
@@ -102,13 +117,25 @@ function CustomerScreen() {
           <p className="mt-2 text-[12.5px] leading-relaxed text-ink2">{customer.note}</p>
         </Card>
       ) : null}
+
+      <SignalForm
+        customerId={customer.id}
+        open={noting}
+        onClose={() => setNoting(false)}
+      />
     </div>
   )
 }
 
 /** Name, the two chips that place the customer, and a strip of the figures
  *  someone would otherwise have to hunt for on the cards below. */
-function Header({ customer }: { customer: Customer }) {
+function Header({
+  customer,
+  onQuickNote,
+}: {
+  customer: Customer
+  onQuickNote: () => void
+}) {
   const facts = [
     { label: t('customers.revenue'), value: customer.revenue ? fmtShort(customer.revenue) : '—' },
     { label: t('customers.contactName'), value: customer.contactName ?? '—' },
@@ -150,6 +177,9 @@ function Header({ customer }: { customer: Customer }) {
         </div>
 
         <div className="flex flex-none items-center gap-2">
+          <Button size="md" onClick={onQuickNote}>
+            {t('signals.quickNote')}
+          </Button>
           <Link to="/customers/$id/edit" params={{ id: customer.id }}>
             <Button size="md">{t('common.edit')}</Button>
           </Link>

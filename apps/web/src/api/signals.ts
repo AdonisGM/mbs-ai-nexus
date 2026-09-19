@@ -1,6 +1,21 @@
 import { queryOptions } from '@tanstack/react-query'
 import { api } from './client'
 
+/** The seven kinds of observation, straight from the two customer scenarios in
+ *  the brief. `other` is the escape hatch, so nobody is ever blocked from
+ *  recording something real because it does not fit a box. */
+export const SIGNAL_TYPES = [
+  'need',
+  'competition',
+  'deadline',
+  'cash_flow',
+  'product_gap',
+  'documents',
+  'other',
+] as const
+
+export type SignalType = (typeof SIGNAL_TYPES)[number]
+
 export type Signal = {
   id: string
   customerId: string
@@ -18,4 +33,15 @@ export function signalsQuery(customerId: string) {
     queryKey: ['customers', customerId, 'signals'],
     queryFn: () => api<Signal[]>(`/customers/${customerId}/signals`),
   })
+}
+
+export type NewSignal = {
+  type: SignalType
+  content: string
+  rawNote?: string
+  observedAt?: string
+}
+
+export function createSignal(customerId: string, body: NewSignal) {
+  return api<Signal>(`/customers/${customerId}/signals`, { method: 'POST', body })
 }

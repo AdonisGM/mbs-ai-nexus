@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { signalsQuery, type Signal } from '~/api/signals'
 import { Caption, Chip, cx } from '~/components/ui/primitives'
 import { BlockSkeleton } from '~/components/ui/query-state'
-import { tCode } from '~/i18n'
+import { t, tCode } from '~/i18n'
 import { vnDate } from '~/lib/dates'
 
 /** What was observed about a customer, newest first.
@@ -19,7 +19,7 @@ export function SignalTimeline({ customerId }: { customerId: string }) {
   }
 
   if (query.data.length === 0) {
-    return <p className="text-[12.5px] text-muted">Chưa ghi nhận tín hiệu nào</p>
+    return <p className="text-[12.5px] text-muted">{t('signals.empty')}</p>
   }
 
   return (
