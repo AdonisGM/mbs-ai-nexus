@@ -52,7 +52,11 @@ export function BrandLockup() {
     <div className="flex items-center gap-3">
       <MsbLogo height={24} />
       <span className="h-5 w-px bg-line2" aria-hidden="true" />
-      <span className="text-[17px] font-semibold tracking-tight">{t('app.product')}</span>
+      {/** Same face as the MSB wordmark beside it is set in — Chakra Petch
+        *  Bold, self-hosted. Sitting a default sans next to a drawn wordmark
+        *  reads as two logos that happen to be adjacent rather than one
+        *  lockup. */}
+      <span className="font-wordmark text-[17px] tracking-tight">{t('app.product')}</span>
     </div>
   )
 }

@@ -49,7 +49,7 @@ function MobileBar({ open, onToggle }: { open: boolean; onToggle: () => void }) 
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
       <MsbLogo height={18} />
-      <span className="text-[13px] font-semibold">{t('app.product')}</span>
+      <span className="font-wordmark text-[13px]">{t('app.product')}</span>
     </div>
   )
 }
@@ -78,7 +78,7 @@ function Sidebar({
       <div className="flex h-full flex-col gap-6 px-4 py-5 md:sticky md:top-0 md:h-screen md:py-6">
         <div className="hidden md:block">
           <MsbLogo height={20} />
-          <div className="mt-2 text-[13px] font-semibold tracking-tight">{t('app.product')}</div>
+          <div className="font-wordmark mt-2 text-[14px] tracking-tight">{t('app.product')}</div>
           <div className="mt-0.5 text-[11px] text-muted">{t('app.tagline')}</div>
         </div>
 
