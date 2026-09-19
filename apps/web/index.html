@@ -11,6 +11,12 @@
     />
     <title>MSB AI Nexus</title>
 
+    <!-- Biểu tượng M của MSB, tải từ msb.com.vn. Máy chủ của họ trả tệp tên
+         favicon.ico nhưng nội dung là PNG 150×150, nên khai đúng type ảnh thật
+         chứ không theo đuôi tệp — khai sai thì Safari bỏ qua không vẽ. -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
     <!-- Nền của thẻ html, chép từ --bg trong tokens.css.
          Phải nằm ngay trong head: lúc phát triển thì tokens.css do JS chèn vào
          nên có một nhịp trang chưa có màu, và trình duyệt vẽ nhịp đó bằng

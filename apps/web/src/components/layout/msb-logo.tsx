@@ -9,6 +9,9 @@
  *  The symbol keeps its own red and orange in both, because that part is the
  *  brand and is not ours to reinterpret.
  *
+ *  The untouched original sits in public/brand/ alongside the black
+ *  variant, for slides and print where a flat file is what is wanted.
+ *
  *  Source: msb.com.vn — package_images/logo_white.svg
  */
 export function MsbLogo({ height = 26 }: { height?: number }) {
