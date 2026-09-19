@@ -20,10 +20,25 @@ export const vi = {
   'nav.targets': 'Chỉ tiêu',
   'nav.settings': 'Cài đặt',
 
+  'app.copyright': '© 2026 MSB AI Nexus',
+
+  'theme.light': 'Sáng',
+  'theme.dark': 'Tối',
+
+  'auth.welcome': 'Chào mừng bạn quay lại',
+  'auth.welcomeNote':
+    'Khách hàng, cơ hội và việc cần làm hôm nay của bạn vẫn ở đây. Đăng nhập để xem tiếp.',
+  'auth.cardTitle': 'Đăng nhập bằng tài khoản',
+  'auth.cardNote':
+    'Dùng mã tài khoản được cấp và mật khẩu của bạn. Hệ thống chưa mở đăng nhập bằng thiết bị.',
+  'auth.codePlaceholder': 'SALE-RB-01',
+  'auth.forgot': 'Quên mật khẩu',
+  'auth.contactAdmin': 'Liên hệ quản trị',
+  'auth.issuedNote':
+    'Tài khoản do quản trị hệ thống cấp, không tự đăng ký. Bản chạy thử mở cho năm tài khoản vận hành của đội AI Nexus.',
   'auth.signIn': 'Đăng nhập',
   'auth.signOut': 'Đăng xuất',
   'auth.code': 'Mã tài khoản',
-  'auth.codeHint': 'Ví dụ SALE-RB-01',
   'auth.password': 'Mật khẩu',
   'auth.signingIn': 'Đang đăng nhập…',
 
