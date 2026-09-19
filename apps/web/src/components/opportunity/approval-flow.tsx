@@ -4,16 +4,22 @@ import { Chip, cx } from '~/components/ui/primitives'
 import { BlockSkeleton } from '~/components/ui/query-state'
 import { t, tCode } from '~/i18n'
 import { LANES, laneIndex, toneOf } from '~/lib/approval'
-import { fmtDuration } from '~/lib/format'
+import { fmtDuration, fmtShort } from '~/lib/format'
+import { vnDate } from '~/lib/dates'
 
-export type FlowView = 'graph' | 'table'
+const COLS = 'grid-cols-[26px_minmax(0,1fr)_118px_130px_88px_96px]'
 
-/** The approval trace of one deal, drawn two ways.
+/** The approval trace of one deal.
  *
- *  Both read the same events. The diagram shows the shape — which tier a deal
- *  bounced between, and where it turned round — and the table shows the detail
- *  a long trace needs, where a diagram would just get tall. */
-export function ApprovalFlow({ opportunityId, view }: { opportunityId: string; view: FlowView }) {
+ *  A table rather than a swimlane diagram, after building both. The diagram
+ *  read the shape well, but the brief asks each step to carry four things —
+ *  who, when, what changed and why — and a box in a lane has room for two.
+ *  The reason a deal was sent back is the most informative line in a trace,
+ *  and it was the one the diagram had to drop.
+ *
+ *  The shape is not lost: the tier column marks position with three dots, so
+ *  a deal bouncing between tiers still reads down the column. */
+export function ApprovalFlow({ opportunityId }: { opportunityId: string }) {
   const query = useQuery(historyQuery(opportunityId))
 
   if (query.isPending) return <BlockSkeleton rows={3} />
@@ -24,20 +30,6 @@ export function ApprovalFlow({ opportunityId, view }: { opportunityId: string; v
     return <p className="text-[12.5px] text-muted">{t('flow.empty')}</p>
   }
 
-  return view === 'table' ? (
-    <FlowTable events={query.data} />
-  ) : (
-    <FlowGraph events={query.data} />
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Table
- * ────────────────────────────────────────────────────────────────────────── */
-
-const COLS = 'grid-cols-[28px_minmax(0,1fr)_100px_150px_110px_100px]'
-
-function FlowTable({ events }: { events: HistoryEvent[] }) {
   return (
     <div className="overflow-hidden rounded-lg border border-line">
       <div
@@ -54,165 +46,102 @@ function FlowTable({ events }: { events: HistoryEvent[] }) {
         <div>{t('flow.result')}</div>
       </div>
 
-      {events.map((event) => (
-        <div
-          key={event.id}
-          className={cx('grid items-center gap-3 border-t border-line px-3.5 py-2.5', COLS)}
-        >
-          <div className="font-mono text-[11px] text-muted">{event.seq}</div>
-          <div className="min-w-0 truncate text-[12.5px]">
-            {tCode('status', event.toStatus, event.toStatus)}
-          </div>
-          <div className="text-[12px] text-ink2">{LANES[laneIndex(event.toStatus)].label}</div>
-          <div className="min-w-0 truncate text-[12px] text-ink2">{event.actorName}</div>
-          {/** How long the deal sat in the previous step, not the wall-clock
-            *  time — the question anyone reading a trace is actually asking is
-            *  "where did it get stuck". */}
-          <div className="font-mono text-[11.5px] text-muted">{fmtDuration(event.heldMs)}</div>
-          <div>
-            <ResultChip event={event} />
-          </div>
-        </div>
+      {query.data.map((event) => (
+        <Row key={event.id} event={event} />
       ))}
     </div>
   )
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Diagram
- * ────────────────────────────────────────────────────────────────────────── */
+function Row({ event }: { event: HistoryEvent }) {
+  const changes = Object.entries(event.changes)
+  const sentBack = event.toStatus === 'lead_returned'
 
-/** Height of one step's row and of the connector beneath it. Fixed rather than
- *  measured, so the connecting lines can be positioned without waiting for a
- *  layout pass and the whole thing renders in one go. */
-const ROW_H = 62
-const CONN_H = 44
-
-function FlowGraph({ events }: { events: HistoryEvent[] }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-line bg-bg">
-      {/** Three columns, one per tier. The lane a box sits in says who acted
-        *  without anyone reading a word of it — which is the whole reason to
-        *  draw this rather than list it. */}
-      <div className="grid grid-cols-3 gap-px bg-line">
-        {LANES.map((lane) => (
+    <div className={cx('grid gap-3 border-t border-line px-3.5 py-2.5', COLS)}>
+      <div className="pt-px font-mono text-[11px] text-muted">{event.seq}</div>
+
+      <div className="min-w-0">
+        <div className="truncate text-[12.5px]">
+          {tCode('status', event.toStatus, event.toStatus)}
+        </div>
+
+        {/** Why, in the words of whoever did it. The brief asks for it, and on
+          *  a send-back it is the only thing that tells the salesperson what
+          *  to fix. Coloured on a send-back because that is the step someone
+          *  is scanning the trace to find. */}
+        {event.reason ? (
           <div
-            key={lane.id}
-            className="bg-sunken py-2 text-center text-[11.5px] font-semibold tracking-[.04em] text-ink2"
+            className={cx(
+              'mt-1 text-[11.5px] leading-snug',
+              sentBack ? 'text-[var(--warn)]' : 'text-muted',
+            )}
           >
-            {lane.label}
+            {event.reason}
           </div>
-        ))}
+        ) : null}
+
+        {/** What changed, field by field. Also from the brief — a log that
+          *  says "edited" without saying what was edited answers nothing. */}
+        {changes.length > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+            {changes.map(([field, [was, now]]) => (
+              <span key={field} className="text-[11px] text-muted">
+                <span className="text-ink2">{fieldLabel(field)}</span>{' '}
+                {formatValue(field, was)} → {formatValue(field, now)}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <div className="relative pb-4">
-        {/** Lane dividers, drawn behind the boxes and running the full height
-          *  so a step in the third lane still reads as belonging to a column. */}
-        <div className="pointer-events-none absolute inset-y-0 left-1/3 w-px bg-line" />
-        <div className="pointer-events-none absolute inset-y-0 left-2/3 w-px bg-line" />
-
-        {events.map((event, index) => {
-          const next = events[index + 1]
-          return (
-            <div key={event.id} className="relative">
-              <StepBox event={event} />
-              {next ? <Connector from={event} to={next} /> : null}
-            </div>
-          )
-        })}
+      <div className="pt-px">
+        <Tier status={event.toStatus} />
       </div>
-    </div>
-  )
-}
 
-function StepBox({ event }: { event: HistoryEvent }) {
-  const lane = laneIndex(event.toStatus)
+      <div className="min-w-0 truncate pt-px text-[12px] text-ink2">{event.actorName}</div>
 
-  return (
-    <div className="relative" style={{ height: ROW_H }}>
-      <div
-        className="absolute top-0 box-border w-[28%] rounded-lg border bg-surface px-2.5 py-2"
-        style={{
-          /** Centred in its lane: each lane is a third wide, and the box is
-           *  28% of the whole, so half the leftover sits either side. */
-          left: `${lane * 33.333 + (33.333 - 28) / 2}%`,
-          borderColor: toneOf(event) === 'warn' ? 'var(--warn)' : 'var(--line2)',
-        }}
-      >
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="min-w-0 truncate text-[12.5px] font-semibold">
-            {tCode('status', event.toStatus, event.toStatus)}
-          </span>
-          <span className="flex-none font-mono text-[10.5px] text-muted">
-            {fmtDuration(event.heldMs)}
-          </span>
-        </div>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate text-[11.5px] text-muted">{event.actorName}</span>
-          <ResultChip event={event} small />
-        </div>
+      {/** How long the deal sat in the step before this one, not the clock
+        *  time — "where did it get stuck" is the question a trace is read to
+        *  answer. */}
+      <div className="pt-px font-mono text-[11.5px] text-muted">
+        {fmtDuration(event.heldMs)}
+      </div>
+
+      <div className="pt-px">
+        <ResultChip event={event} />
       </div>
     </div>
   )
 }
 
-/** The line from one step to the next.
+/** Which tier acted, as three dots plus its name.
  *
- *  Down, across, down again, with an arrowhead — an L rather than a diagonal,
- *  because a diagonal crossing two lane dividers is hard to follow back to
- *  where it started. A move that stays in its own lane is a straight drop. */
-function Connector({ from, to }: { from: HistoryEvent; to: HistoryEvent }) {
-  const a = laneIndex(from.toStatus)
-  const b = laneIndex(to.toStatus)
-  const centre = (lane: number) => lane * 33.333 + 33.333 / 2
-
-  const back = b < a
-  const colour = back ? 'var(--warn)' : 'var(--line2)'
-  const dashed = back
-
-  const left = Math.min(centre(a), centre(b))
-  const width = Math.abs(centre(b) - centre(a))
+ *  The dots are what survives from the swimlane diagram: read down the column
+ *  and a deal that went up to the branch manager and came back reads as a
+ *  shape, without a diagram's height. */
+function Tier({ status }: { status: string }) {
+  const active = laneIndex(status)
 
   return (
-    <div className="relative" style={{ height: CONN_H }}>
-      <span
-        className="absolute top-0 h-4 border-l"
-        style={{ left: `${centre(a)}%`, borderColor: colour, borderStyle: dashed ? 'dashed' : 'solid' }}
-      />
-      {width > 0 ? (
-        <span
-          className="absolute top-4 border-t"
-          style={{
-            left: `${left}%`,
-            width: `${width}%`,
-            borderColor: colour,
-            borderStyle: dashed ? 'dashed' : 'solid',
-          }}
-        />
-      ) : null}
-      <span
-        className="absolute top-4 h-5 border-l"
-        style={{ left: `${centre(b)}%`, borderColor: colour, borderStyle: dashed ? 'dashed' : 'solid' }}
-      />
-      <span
-        className="absolute top-[36px] -ml-1 size-0 border-x-4 border-t-[6px] border-x-transparent"
-        style={{ left: `${centre(b)}%`, borderTopColor: colour }}
-      />
-      {/** Only a step backwards gets a word on it. Forward moves are the
-        *  expected direction and labelling every one is noise. */}
-      {back ? (
-        <span
-          className="absolute top-0 text-[10.5px] whitespace-nowrap text-[var(--warn)]"
-          style={{ left: `${left + width + 1.5}%` }}
-        >
-          {t('flow.sentBack')}
-        </span>
-      ) : null}
-    </div>
+    <span className="flex items-center gap-2">
+      <span className="flex gap-[3px]">
+        {LANES.map((lane, index) => (
+          <span
+            key={lane.id}
+            className={cx(
+              'size-1.5 rounded-full',
+              index === active ? 'bg-ink2' : 'bg-line2',
+            )}
+          />
+        ))}
+      </span>
+      <span className="text-[12px] text-ink2">{LANES[active].label}</span>
+    </span>
   )
 }
 
-function ResultChip({ event, small }: { event: HistoryEvent; small?: boolean }) {
+function ResultChip({ event }: { event: HistoryEvent }) {
   const tone = toneOf(event)
   const tones = {
     good: { fg: 'var(--success)', bg: 'var(--success-soft)' },
@@ -227,9 +156,23 @@ function ResultChip({ event, small }: { event: HistoryEvent; small?: boolean }) 
         ? t('flow.sentUp')
         : t('flow.sentDown')
 
-  return (
-    <Chip tone={tones[tone]} className={small ? 'px-1.5 py-[2px] text-[10px]' : undefined}>
-      {label}
-    </Chip>
-  )
+  return <Chip tone={tones[tone]}>{label}</Chip>
+}
+
+function fieldLabel(field: string): string {
+  return tCode('field', field, field)
+}
+
+/** Renders a before/after value the way the field is read elsewhere, so an
+ *  amount in the trace matches the amount on the row above it. */
+function formatValue(field: string, value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—'
+  if (Array.isArray(value)) return value.length === 0 ? '—' : value.join(', ')
+  if (typeof value === 'object') return '…'
+  if (field === 'value' && typeof value === 'number') return fmtShort(value)
+  if (field === 'winProbability') return `${value}%`
+  if (field === 'dueDate') return vnDate(String(value))
+  if (field === 'stage') return tCode('stage', String(value), String(value))
+  if (field === 'blockerCode') return tCode('blocker', String(value), String(value))
+  return String(value)
 }

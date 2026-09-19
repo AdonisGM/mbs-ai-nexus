@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { opportunitiesQuery, type Opportunity } from '~/api/opportunities'
-import { ApprovalFlow, type FlowView } from '~/components/opportunity/approval-flow'
+import { ApprovalFlow } from '~/components/opportunity/approval-flow'
 import { Button, Chip, Money, cx } from '~/components/ui/primitives'
 import { BlockSkeleton } from '~/components/ui/query-state'
-import { SegmentedControl } from '~/components/ui/segmented'
 import { t, tCode } from '~/i18n'
 import { LANES, holderLabel, laneStates } from '~/lib/approval'
 import { daysUntil, vnDate } from '~/lib/dates'
@@ -24,7 +23,6 @@ const COLS =
  *  while the detail is read. */
 export function OpportunityTable({ customerId }: { customerId: string }) {
   const [openId, setOpenId] = useState<string | null>(null)
-  const [view, setView] = useState<FlowView>('graph')
 
   const query = useQuery(opportunitiesQuery({ customerId, pageSize: 50 }))
 
@@ -37,29 +35,12 @@ export function OpportunityTable({ customerId }: { customerId: string }) {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-baseline gap-2.5">
-          <h2 className="text-[14px] font-semibold">{t('nav.opportunities')}</h2>
-          <span className="text-[11px] text-muted">
-            {rows.length} {t('opportunities.unit')}
-            {rows.length > 0 ? ` · ${t('opportunities.clickHint')}` : ''}
-          </span>
-        </div>
-
-        {/** Only offered once there is a trace to look at. */}
-        {rows.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted">{t('flow.title')}</span>
-            <SegmentedControl
-              value={view}
-              onChange={setView}
-              options={[
-                { id: 'graph', label: t('flow.asGraph') },
-                { id: 'table', label: t('flow.asTable') },
-              ]}
-            />
-          </div>
-        ) : null}
+      <div className="flex flex-wrap items-baseline gap-2.5">
+        <h2 className="text-[14px] font-semibold">{t('nav.opportunities')}</h2>
+        <span className="text-[11px] text-muted">
+          {rows.length} {t('opportunities.unit')}
+          {rows.length > 0 ? ` · ${t('opportunities.clickHint')}` : ''}
+        </span>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line bg-surface">
@@ -90,7 +71,6 @@ export function OpportunityTable({ customerId }: { customerId: string }) {
                   key={deal.id}
                   deal={deal}
                   open={openId === deal.id}
-                  view={view}
                   onToggle={() => setOpenId((current) => (current === deal.id ? null : deal.id))}
                 />
               ))
@@ -105,12 +85,10 @@ export function OpportunityTable({ customerId }: { customerId: string }) {
 function Row({
   deal,
   open,
-  view,
   onToggle,
 }: {
   deal: Opportunity
   open: boolean
-  view: FlowView
   onToggle: () => void
 }) {
   return (
@@ -153,7 +131,7 @@ function Row({
 
       {open ? (
         <div className="bg-sunken/40 px-4 pt-1 pb-4">
-          <ApprovalFlow opportunityId={deal.id} view={view} />
+          <ApprovalFlow opportunityId={deal.id} />
           <Footer deal={deal} />
         </div>
       ) : null}

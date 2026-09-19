@@ -145,8 +145,6 @@ export const vi = {
   'opportunities.add': '+ Cơ hội',
 
   'flow.title': 'Luồng phê duyệt',
-  'flow.asGraph': 'Sơ đồ',
-  'flow.asTable': 'Bảng',
   'flow.step': 'Bước',
   'flow.tier': 'Cấp',
   'flow.actor': 'Người xử lý',
@@ -160,6 +158,10 @@ export const vi = {
   'flow.loadFailed': 'Không đọc được luồng phê duyệt',
 
   'field.bmDecision': 'Giám đốc duyệt',
+  'field.blockerNote': 'Chi tiết điểm nghẽn',
+  'field.supportNeeded': 'Hỗ trợ cần thiết',
+  'field.missingInfo': 'Thông tin còn thiếu',
+  'field.confirmedData': 'Dữ liệu đã xác nhận',
 
   'common.search': 'Tìm kiếm',
 
