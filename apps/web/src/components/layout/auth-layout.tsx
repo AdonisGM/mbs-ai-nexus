@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { SegmentedControl } from '~/components/ui/segmented'
 import { t } from '~/i18n'
-import { MsbLogo } from './msb-logo'
+import { BrandLockup } from './msb-logo'
 import { useTheme } from './theme'
 
 /** The frame around signing in: grain, a light/dark switch, nothing else.
@@ -41,25 +41,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   )
 }
 
-/** The bank's mark, then the product name.
- *
- *  Two pieces rather than one lockup, separated by a hairline: MSB is the
- *  institution and AI Nexus is a thing built inside it, and running the two
- *  together as a single wordmark would claim a brand that does not exist. The
- *  divider says "from" without needing the word. */
-export function BrandLockup() {
-  return (
-    <div className="flex items-center gap-3">
-      <MsbLogo height={24} />
-      <span className="h-5 w-px bg-line2" aria-hidden="true" />
-      {/** Same face as the MSB wordmark beside it is set in — Chakra Petch
-        *  Bold, self-hosted. Sitting a default sans next to a drawn wordmark
-        *  reads as two logos that happen to be adjacent rather than one
-        *  lockup. */}
-      <span className="font-wordmark text-[17px] tracking-tight">{t('app.product')}</span>
-    </div>
-  )
-}
+
+export { BrandLockup }
 
 export function AuthFooter() {
   return (

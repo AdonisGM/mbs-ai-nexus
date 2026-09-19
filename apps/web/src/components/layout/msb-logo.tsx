@@ -1,3 +1,6 @@
+import { cx } from '~/components/ui/primitives'
+import { t } from '~/i18n'
+
 /** MSB's own wordmark, taken from the bank's site and kept in the repository
  *  rather than linked to it: a logo fetched from someone else's server is a
  *  network round trip on the login screen and a broken image the day they
@@ -70,5 +73,34 @@ export function MsbLogo({ height = 26 }: { height?: number }) {
       </clipPath>
       </defs>
     </svg>
+  )
+}
+
+/** The bank's mark, then the product name.
+ *
+ *  Two pieces rather than one wordmark, separated by a hairline: MSB is the
+ *  institution and AI Nexus is a thing built inside it, and running the two
+ *  together as a single lockup would claim a brand that does not exist. The
+ *  divider says "from" without needing the word.
+ *
+ *  `AI Nexus` is set in the same face as the MSB wordmark beside it. A default
+ *  sans next to a drawn wordmark reads as two logos that happen to be adjacent
+ *  rather than one lockup. */
+export function BrandLockup({ size = 'lg' }: { size?: 'sm' | 'lg' }) {
+  const small = size === 'sm'
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <MsbLogo height={small ? 19 : 24} />
+      <span className={cx('w-px bg-line2', small ? 'h-4' : 'h-5')} aria-hidden="true" />
+      <span
+        className={cx(
+          'font-wordmark tracking-tight',
+          small ? 'text-[14px]' : 'text-[17px]',
+        )}
+      >
+        {t('app.product')}
+      </span>
+    </div>
   )
 }

@@ -6,7 +6,7 @@ import { logout, type Me } from '~/api/auth'
 import { Button } from '~/components/ui/primitives'
 import { t } from '~/i18n'
 import { initials } from '~/lib/format'
-import { MsbLogo } from './msb-logo'
+import { BrandLockup } from './msb-logo'
 import { navFor } from './nav-config'
 import { useTheme } from './theme'
 
@@ -83,8 +83,7 @@ function MobileBar({ open, onToggle }: { open: boolean; onToggle: () => void }) 
       >
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
-      <MsbLogo height={18} />
-      <span className="font-wordmark text-[13px]">{t('app.product')}</span>
+      <BrandLockup size="sm" />
     </div>
   )
 }
@@ -101,9 +100,8 @@ function SidebarBody({
   return (
     <div className="flex h-full flex-col gap-6 px-4 py-5 lg:sticky lg:top-0 lg:h-screen lg:py-6">
       <div className="hidden lg:block">
-        <MsbLogo height={20} />
-        <div className="font-wordmark mt-2 text-[14px] tracking-tight">{t('app.product')}</div>
-        <div className="mt-0.5 text-[11px] text-muted">{t('app.tagline')}</div>
+        <BrandLockup size="sm" />
+        <div className="mt-2 text-[11px] leading-relaxed text-muted">{t('app.tagline')}</div>
       </div>
 
       <nav className="flex flex-col gap-0.5">
