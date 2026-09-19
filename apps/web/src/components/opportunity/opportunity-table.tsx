@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { opportunitiesQuery, type Opportunity } from '~/api/opportunities'
 import { ApprovalFlow } from '~/components/opportunity/approval-flow'
+import { ChevronRight } from 'lucide-react'
 import { Button, Chip, Money, cx } from '~/components/ui/primitives'
 import { BlockSkeleton } from '~/components/ui/query-state'
 import { t, tCode } from '~/i18n'
@@ -12,8 +13,7 @@ import { fmtShort } from '~/lib/format'
 /** Grid used by the header and every row, declared once so the two cannot
  *  drift apart — a header that no longer lines up with its columns is the
  *  classic way a hand-built table goes wrong. */
-const COLS =
-  'grid-cols-[120px_minmax(0,1fr)_110px_130px_78px_210px_100px]'
+export const COLS = 'grid-cols-[120px_minmax(0,1fr)_120px_130px_78px_190px_100px]'
 
 /** Every deal on a customer, with the approval trace one click away.
  *
@@ -91,6 +91,15 @@ function Row({
   open: boolean
   onToggle: () => void
 }) {
+  /** Latched once opened, so the trace stays mounted and the row animates shut
+   *  as smoothly as it animated open. Mounting on the way in and unmounting on
+   *  the way out gives an instant snap closed, because there is nothing left
+   *  to collapse. It also keeps the fetch to once per row. */
+  const [everOpened, setEverOpened] = useState(open)
+  useEffect(() => {
+    if (open) setEverOpened(true)
+  }, [open])
+
   return (
     <div className="border-t border-line">
       <div
@@ -109,7 +118,13 @@ function Row({
           open && 'bg-sunken',
         )}
       >
-        <div className="font-mono text-[11px] text-muted">{deal.code}</div>
+        <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted">
+          <ChevronRight
+            size={13}
+            className={cx('flex-none transition-transform duration-200', open && 'rotate-90')}
+          />
+          {deal.code}
+        </div>
         <div className="min-w-0">
           <div className="truncate text-[13.5px] font-medium">{deal.product}</div>
           <div className="truncate text-[11.5px] text-muted">{deal.need}</div>
@@ -129,12 +144,18 @@ function Row({
         </div>
       </div>
 
-      {open ? (
-        <div className="bg-sunken/40 px-4 pt-1 pb-4">
-          <ApprovalFlow opportunityId={deal.id} />
-          <Footer deal={deal} />
+      {/** Animated by the parent's grid rows rather than a measured height, so
+        *  it opens to exactly the content and never clips a long trace. */}
+      <div className="collapse-y" data-open={open}>
+        <div>
+          {everOpened ? (
+            <>
+              <ApprovalFlow opportunityId={deal.id} />
+              <Footer deal={deal} />
+            </>
+          ) : null}
         </div>
-      ) : null}
+      </div>
     </div>
   )
 }
@@ -230,8 +251,8 @@ function Footer({ deal }: { deal: Opportunity }) {
   ].filter(Boolean)
 
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-      <div className="max-w-[660px] text-[12.5px] leading-relaxed text-muted">
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line bg-sunken/30 px-4 py-3">
+      <div className="max-w-[660px] pl-5 text-[12.5px] leading-relaxed text-muted">
         {notes.length > 0 ? notes.join(' · ') : t('opportunities.noNote')}
       </div>
       {/** Buttons are next: they post to /opportunities/:id/actions/:action,

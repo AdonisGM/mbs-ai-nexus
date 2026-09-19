@@ -333,3 +333,32 @@
 }
 .ProseMirror.resize-cursor { cursor: col-resize }
 
+
+/* Mở và gập bằng grid-template-rows 0fr → 1fr.
+ *
+ *  Cách duy nhất chuyển động được tới chiều cao "vừa nội dung" mà không phải đo
+ *  bằng JavaScript rồi đặt max-height bằng một con số đoán — con số ấy luôn sai
+ *  vào ngày nội dung dài hơn dự tính, và khi ấy phần thừa bị cắt cụt lặng lẽ.
+ *
+ *  Con bên trong phải overflow:hidden và min-height:0, nếu không nó tự đẩy hàng
+ *  lưới rộng ra và 0fr thành vô nghĩa. */
+.collapse-y {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapse-y[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.collapse-y > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse-y {
+    transition: none;
+  }
+}
