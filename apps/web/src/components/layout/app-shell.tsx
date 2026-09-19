@@ -3,12 +3,23 @@ import { Link, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { LogOut, Menu, Moon, Sun, X } from 'lucide-react'
 import { logout, type Me } from '~/api/auth'
-import { Button, cx } from '~/components/ui/primitives'
+import { Button } from '~/components/ui/primitives'
 import { t } from '~/i18n'
 import { initials } from '~/lib/format'
 import { MsbLogo } from './msb-logo'
 import { navFor } from './nav-config'
 import { useTheme } from './theme'
+
+/** How wide the content is allowed to get.
+ *
+ *  The frame itself always fills the window — the sidebar sits against the
+ *  left edge and the background runs to both — but a pipeline table stretched
+ *  across a 27-inch monitor is unreadable, so only the content inside the main
+ *  column is capped and centred.
+ *
+ *  Capping the whole frame instead is what leaves a sidebar floating in from
+ *  the edge with dead space either side of it. */
+const CONTENT_MAX = 1600
 
 /** The frame every screen inside the app sits in.
  *
@@ -25,13 +36,37 @@ export function AppShell({ user, children }: { user: Me; children: ReactNode }) 
   const items = navFor(user.role)
 
   return (
-    <div className="min-h-screen bg-bg text-ink">
+    <div className="relative flex min-h-screen flex-col bg-bg text-ink">
+      {/** The same faint noise as the login screen. Without it the two read as
+        *  different products the moment someone signs in. */}
+      <div
+        className="grain pointer-events-none fixed inset-0 z-0"
+        style={{ opacity: 'var(--grain)' }}
+      />
+
       <MobileBar open={menuOpen} onToggle={() => setMenuOpen((open) => !open)} />
 
-      <div className="mx-auto flex w-full max-w-[1400px]">
-        <Sidebar user={user} items={items} open={menuOpen} onNavigate={() => setMenuOpen(false)} />
+      <div className="relative z-[1] flex min-h-0 flex-1">
+        {/** Fixed width, flush to the window edge. From lg up rather than md:
+          *  below about 1024px a 232px column plus a table leaves neither
+          *  enough room. */}
+        <aside className="hidden w-[232px] flex-none border-r border-line bg-surface lg:block">
+          <SidebarBody user={user} items={items} onNavigate={() => setMenuOpen(false)} />
+        </aside>
 
-        <main className="min-w-0 flex-1 px-4 pt-4 pb-16 md:px-8 md:pt-8">{children}</main>
+        {/** Under lg the same menu drops out of the bar instead. One body in
+          *  two placements, rather than two components to keep in step. */}
+        {menuOpen ? (
+          <div className="fixed inset-x-0 top-[49px] bottom-0 z-30 overflow-y-auto border-b border-line bg-surface lg:hidden">
+            <SidebarBody user={user} items={items} onNavigate={() => setMenuOpen(false)} />
+          </div>
+        ) : null}
+
+        <main className="min-w-0 flex-1 px-4 pt-5 pb-14 sm:px-6 lg:px-8 lg:pt-7">
+          <div className="mx-auto flex flex-col gap-5" style={{ maxWidth: CONTENT_MAX }}>
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   )
@@ -39,11 +74,11 @@ export function AppShell({ user, children }: { user: Me; children: ReactNode }) 
 
 function MobileBar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-surface px-4 py-3 md:hidden">
+    <div className="relative z-40 flex items-center gap-3 border-b border-line bg-surface px-4 py-3 lg:hidden">
       <button
         type="button"
         onClick={onToggle}
-        aria-label={open ? 'Đóng menu' : 'Mở menu'}
+        aria-label={open ? t('nav.closeMenu') : t('nav.openMenu')}
         className="rounded-[6px] p-1 text-muted hover:text-ink"
       >
         {open ? <X size={18} /> : <Menu size={18} />}
@@ -54,63 +89,51 @@ function MobileBar({ open, onToggle }: { open: boolean; onToggle: () => void }) 
   )
 }
 
-function Sidebar({
+function SidebarBody({
   user,
   items,
-  open,
   onNavigate,
 }: {
   user: Me
   items: ReturnType<typeof navFor>
-  open: boolean
   onNavigate: () => void
 }) {
   return (
-    <aside
-      className={cx(
-        'w-full shrink-0 border-line bg-surface md:block md:w-[232px] md:border-r',
-        /** On a phone the sidebar is a drawer under the bar; from md up it is
-         *  a column that never moves. One element, two behaviours, rather than
-         *  two components to keep in step. */
-        open ? 'block border-b' : 'hidden',
-      )}
-    >
-      <div className="flex h-full flex-col gap-6 px-4 py-5 md:sticky md:top-0 md:h-screen md:py-6">
-        <div className="hidden md:block">
-          <MsbLogo height={20} />
-          <div className="font-wordmark mt-2 text-[14px] tracking-tight">{t('app.product')}</div>
-          <div className="mt-0.5 text-[11px] text-muted">{t('app.tagline')}</div>
-        </div>
+    <div className="flex h-full flex-col gap-6 px-4 py-5 lg:sticky lg:top-0 lg:h-screen lg:py-6">
+      <div className="hidden lg:block">
+        <MsbLogo height={20} />
+        <div className="font-wordmark mt-2 text-[14px] tracking-tight">{t('app.product')}</div>
+        <div className="mt-0.5 text-[11px] text-muted">{t('app.tagline')}</div>
+      </div>
 
-        <nav className="flex flex-col gap-0.5">
-          {items.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
-              /** Exact for the root, prefix for the rest: otherwise "Việc hôm
-               *  nay" stays lit on every screen, and a highlighted menu that
-               *  never changes is worse than none. */
-              activeOptions={{ exact: item.to === '/' }}
-              activeProps={{ className: 'bg-sunken text-ink' }}
-              inactiveProps={{ className: 'text-muted hover:bg-sunken hover:text-ink' }}
-              className="flex items-center gap-2.5 rounded-[6px] px-2.5 py-2 text-[13px] transition-colors"
-            >
-              <item.icon size={16} className="shrink-0" />
-              {t(item.key)}
-            </Link>
-          ))}
-        </nav>
+      <nav className="flex flex-col gap-0.5">
+        {items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate}
+            /** Exact for the root, prefix for the rest: otherwise "Việc hôm
+             *  nay" stays lit on every screen, and a highlighted menu that
+             *  never changes is worse than none. */
+            activeOptions={{ exact: item.to === '/' }}
+            activeProps={{ className: 'bg-sunken text-ink' }}
+            inactiveProps={{ className: 'text-muted hover:bg-sunken hover:text-ink' }}
+            className="flex items-center gap-2.5 rounded-[6px] px-2.5 py-2 text-[13px] transition-colors"
+          >
+            <item.icon size={16} className="shrink-0" />
+            {t(item.key)}
+          </Link>
+        ))}
+      </nav>
 
-        <div className="mt-auto flex flex-col gap-3 border-t border-line pt-4">
-          <Identity user={user} />
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <SignOut />
-          </div>
+      <div className="mt-auto flex flex-col gap-3 border-t border-line pt-4">
+        <Identity user={user} />
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <SignOut />
         </div>
       </div>
-    </aside>
+    </div>
   )
 }
 
@@ -145,7 +168,7 @@ function ThemeToggle() {
       variant="ghost"
       size="sm"
       onClick={() => setMode(theme === 'dark' ? 'light' : 'dark')}
-      aria-label={theme === 'dark' ? 'Chuyển nền sáng' : 'Chuyển nền tối'}
+      aria-label={theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
     >
       {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
     </Button>

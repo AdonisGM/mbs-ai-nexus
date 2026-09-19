@@ -21,11 +21,15 @@ export const vi = {
   'nav.unit': 'Đơn vị',
   'nav.targets': 'Chỉ tiêu',
   'nav.settings': 'Cài đặt',
+  'nav.openMenu': 'Mở menu',
+  'nav.closeMenu': 'Đóng menu',
 
   'app.copyright': '© 2026 MSB AI Nexus',
 
   'theme.light': 'Sáng',
   'theme.dark': 'Tối',
+  'theme.toLight': 'Chuyển nền sáng',
+  'theme.toDark': 'Chuyển nền tối',
 
   'auth.welcome': 'Chào mừng bạn quay lại',
   'auth.welcomeNote':
