@@ -176,12 +176,16 @@ function ResultChip({ event }: { event: HistoryEvent }) {
     muted: { fg: 'var(--muted)', bg: 'var(--sunken)' },
   } as const
 
+  /** The opening event is the deal coming into being. Calling it an edit is
+   *  technically true of the record and useless to anyone reading the trace. */
   const label =
-    event.direction === 'in_place'
-      ? t('flow.edited')
-      : event.direction === 'up'
-        ? t('flow.sentUp')
-        : t('flow.sentDown')
+    event.seq === 1
+      ? t('flow.created')
+      : event.direction === 'in_place'
+        ? t('flow.edited')
+        : event.direction === 'up'
+          ? t('flow.sentUp')
+          : t('flow.sentDown')
 
   return <Chip tone={tones[toneOf(event)]}>{label}</Chip>
 }

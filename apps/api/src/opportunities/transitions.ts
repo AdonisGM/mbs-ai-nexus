@@ -39,6 +39,14 @@ export type Transition = {
   handTo: 'owner' | 'lead' | 'bm' | 'none'
   /** Anything that costs someone else work has to say why. */
   requiresReason?: boolean
+  /** A narrower `from` for particular roles.
+   *
+   *  Exists for one rule, and it is a rule worth the extra field: a
+   *  salesperson may record a win, but only once a team lead has backed the
+   *  deal. Without it they can go from their own confirmation straight to
+   *  "won" and the deal lands in the branch's results having passed neither
+   *  gate — which is the entire approval chain quietly optional. */
+  fromByRole?: Partial<Record<Role, readonly ApprovalStatus[]>>
 }
 
 export const TRANSITIONS: readonly Transition[] = [
@@ -111,9 +119,16 @@ export const TRANSITIONS: readonly Transition[] = [
     handTo: 'owner',
   },
 
+  /** Recording a win.
+   *
+   *  A team lead may do it from anywhere they can see the deal — pressing it
+   *  is itself them engaging with it. A salesperson may only do it after the
+   *  deal has been backed, because otherwise the whole chain is skippable by
+   *  the person with the most reason to skip it. */
   {
     action: 'complete',
     from: ['sale_confirmed', 'lead_viewed', 'lead_approved', 'bm_decided'],
+    fromByRole: { sale: ['lead_approved', 'bm_decided'] },
     to: 'completed',
     roles: ['sale', 'team_lead'],
     direction: 'in_place',
@@ -156,7 +171,8 @@ export function findTransition(action: ActionName): Transition | undefined {
  *  able to unstick a demo. The audit trail still records who did it. */
 export function allows(transition: Transition, role: Role, from: ApprovalStatus): boolean {
   if (role === 'admin') return transition.from.includes(from)
-  return transition.roles.includes(role) && transition.from.includes(from)
+  const allowedFrom = transition.fromByRole?.[role] ?? transition.from
+  return transition.roles.includes(role) && allowedFrom.includes(from)
 }
 
 /** Which buttons to show on a deal. The screen renders this rather than

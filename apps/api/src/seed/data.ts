@@ -572,9 +572,13 @@ export const DEALS: SeedDeal[] = [
     value: 1_500_000_000,
     stage: 'closing',
     dueInDays: 6,
+    /** The team lead backs it first, then the salesperson records the win.
+     *  Two steps rather than one because that is the actual rule: a deal
+     *  cannot reach the branch's results without the chain having seen it. */
     script: [
       { action: 'confirm' },
       { action: 'view' },
+      { action: 'coach' },
       { action: 'complete', reason: 'Khách tái tục toàn bộ, kỳ hạn 12 tháng' },
     ],
   },
@@ -666,6 +670,7 @@ export const DEALS: SeedDeal[] = [
     script: [
       { action: 'confirm' },
       { action: 'view' },
+      { action: 'coach' },
       { action: 'complete', reason: 'Đã phát hành thẻ, khách kích hoạt' },
     ],
   },

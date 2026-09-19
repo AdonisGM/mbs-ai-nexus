@@ -180,6 +180,7 @@ export const vi = {
   'flow.result': 'Kết quả',
   'flow.sentUp': 'Chuyển lên',
   'flow.sentDown': 'Giao xuống',
+  'flow.created': 'Tạo mới',
   'flow.edited': 'Sửa tại chỗ',
   'flow.sentBack': 'trả lại',
   'flow.empty': 'Chưa có bước phê duyệt nào',

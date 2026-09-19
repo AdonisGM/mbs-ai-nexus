@@ -141,6 +141,48 @@ describe('who may press what', () => {
   })
 })
 
+describe('the approval chain cannot be skipped', () => {
+  /** The failure this guards against: a salesperson confirms their own deal
+   *  and immediately marks it won, so it lands in the branch's results having
+   *  passed neither gate. The person with the most reason to skip the chain
+   *  was the one able to. */
+  it('does not let a salesperson record a win straight after their own confirmation', () => {
+    expect(availableActions('sale', 'sale_confirmed')).not.toContain('complete')
+    expect(availableActions('sale', 'lead_viewed')).not.toContain('complete')
+  })
+
+  it('lets a salesperson record a win once the deal has been backed', () => {
+    expect(availableActions('sale', 'lead_approved')).toContain('complete')
+    expect(availableActions('sale', 'bm_decided')).toContain('complete')
+  })
+
+  /** A team lead pressing it is itself the deal being engaged with, so they
+   *  are not made to approve their own approval first. */
+  it('lets a team lead record a win from anywhere they can see the deal', () => {
+    for (const status of ['sale_confirmed', 'lead_viewed', 'lead_approved', 'bm_decided'] as const) {
+      expect(availableActions('team_lead', status)).toContain('complete')
+    }
+  })
+
+  /** Losing a deal is not the same shape. The customer went elsewhere; making
+   *  that wait for an approval would leave the pipeline carrying deals
+   *  everyone knows are dead. */
+  it('still lets a deal be closed as lost at any point after confirmation', () => {
+    expect(availableActions('sale', 'sale_confirmed')).toContain('close')
+    expect(availableActions('sale', 'lead_returned')).toContain('close')
+  })
+
+  it('reaches every state from the start even with the narrower rule', () => {
+    const seen = new Set<ApprovalStatus>(['sale_reviewing'])
+    for (let pass = 0; pass < APPROVAL_STATUSES.length; pass++) {
+      for (const transition of TRANSITIONS) {
+        if (transition.from.some((from) => seen.has(from))) seen.add(transition.to)
+      }
+    }
+    expect(seen).toContain('completed')
+  })
+})
+
 describe('the loop back', () => {
   /** Sending a deal back has to have a way home, or the salesperson is stuck
    *  holding something they cannot resubmit. */

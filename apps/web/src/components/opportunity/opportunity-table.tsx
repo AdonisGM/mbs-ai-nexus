@@ -139,7 +139,7 @@ function Row({
         <div className="text-right font-mono text-[12.5px] text-ink2">
           {deal.winProbability}%
         </div>
-        <ApprovalBar status={deal.approvalStatus} />
+        <ApprovalBar deal={deal} />
         <div className="text-right">
           <Due deal={deal} />
         </div>
@@ -163,11 +163,31 @@ function Row({
 
 /** Three segments, one per tier, plus who is holding it.
  *
- *  Reads at a glance across a list of deals — which is the one thing a
- *  status word alone cannot do, because comparing ten words means reading
- *  ten words. */
-function ApprovalBar({ status }: { status: string }) {
-  const states = laneStates(status)
+ *  Reads at a glance across a list of deals — the one thing a status word
+ *  alone cannot do, because comparing ten words means reading ten words. */
+function ApprovalBar({ deal }: { deal: OpportunityWithActions }) {
+  /** A finished deal is not a progress bar with some segments left over. Drawn
+   *  on the three-tier bar it reads as "one of three done", which is the
+   *  opposite of what happened — so it gets its own shape: one solid bar in
+   *  the colour of the outcome. */
+  if (deal.outcome !== 'open') {
+    const won = deal.outcome === 'won'
+    return (
+      <div className="flex items-center gap-2.5">
+        <span
+          className={cx(
+            'h-1.5 min-w-0 flex-1 rounded-full',
+            won ? 'bg-[var(--success)]' : 'bg-line2',
+          )}
+        />
+        <span className="w-[76px] flex-none text-right text-[10.5px] text-muted">
+          {holderLabel(deal.approvalStatus)}
+        </span>
+      </div>
+    )
+  }
+
+  const states = laneStates(deal.approvalStatus)
 
   return (
     <div className="flex items-center gap-2.5">
@@ -186,7 +206,7 @@ function ApprovalBar({ status }: { status: string }) {
         ))}
       </div>
       <span className="w-[76px] flex-none text-right text-[10.5px] text-muted">
-        {holderLabel(status)}
+        {holderLabel(deal.approvalStatus)}
       </span>
     </div>
   )
